@@ -49,8 +49,9 @@ public class UserController {
 
     @RequestMapping("/")
     public String index(Model model, Long id) {
-        //        return "/admin-help";
-        return "/queryAllTable";
+        ////        return "/admin-help";
+      return "/queryAllTable";
+
     }
 
     @RequestMapping("/getAllByDB")

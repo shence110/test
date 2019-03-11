@@ -10,41 +10,44 @@
 
 </head>
 <body>
-<div data-options="region: 'center',title: ''" style="padding: 0px;">
-    <div class="parentlayout" style="height: 100%">
+<!--<div data-options="region: 'center',title: ''" style="padding: 0px;">
+    <div class="parentlayout" style="height: 100%" >
 <div style="margin:20px 0;">
     <div id="tb" style="padding:5px;height:auto">
 
         <div>
 
-            <select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="onChange:uie_dgd_search" id="db">
-                <option value="bimall">合并库</option>
-                <option value="eafbim">项目测试库</option>
-                <option value="gwsbim">署级测试库</option>
-                <option value="wcjbim">第三人民医院</option>
-            </select>
-            <button  id="me" onclick="merge()" type="button" >合并</button>
+
         </div>
     </div>
 
 </div>
     </div>
-</div>
-<table id="dg" title="Client Side Pagination" style="width:700px;height:300px" data-options="
+</div>-->
+<select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="onChange:uie_dgd_search" id="db">
+    <option value="bimall">合并库</option>
+    <option value="eafbim">项目测试库</option>
+    <option value="gwsbim">署级测试库</option>
+    <option value="wcjbim">第三人民医院</option>
+</select>
+<button  id="me" onclick="merge()" type="button" >合并</button>
+
+<table id="dg"  class="easyui-datagrid" title="Client Side Pagination" style="width:700px;height:300px" data-options="
 				rownumbers:true,
-				singleSelect:true,
+
 				autoRowHeight:false,
 				pagination:true,
 				pageSize:10">
-    <thead>
+
     <tr>
         <th field="tbName" width="80" data-options="sortable:true">表名</th>
         <th field="row" width="100" data-options="sortable:true">行数</th>
         <th field="column" width="80" data-options="sortable:true">列数</th>
 
     </tr>
-    </thead>
+
 </table>
+
 
 <script>
 
