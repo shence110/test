@@ -1,0 +1,15 @@
+.DS_Store
+node_modules
+/.idea
+/dist/*.html
+/dist/docs
+/docs
+tasks
+gulpfile.js
+.editorconfig
+.gitignore
+.jshintrc
+.npmignore
+.eslintrc
+.*
+bower.json

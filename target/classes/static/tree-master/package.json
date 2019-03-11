@@ -1,0 +1,41 @@
+{
+  "name": "amazeui-tree",
+  "version": "0.0.5",
+  "description": "Amaze UI tree 插件",
+  "main": "lib/amazeui.tree.js",
+  "style": "dist/amazeui.tree.css",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amazeui/tree.git"
+  },
+  "keywords": [
+    "amazeui-plugin",
+    "amaze-ui",
+    "AMUI",
+    "tree",
+    "navs",
+    "jquery-plugin"
+  ],
+  "author": "minwe <minwe@yunshipei.com>",
+  "bugs": {
+    "url": "https://github.com/amazeui/tree/issues"
+  },
+  "homepage": "http://amazeui.github.io/tree/",
+  "license": "MIT",
+  "devDependencies": {
+    "amazeui-doc-util": "latest",
+    "amazeui-gulp-tasks": "0.0.7",
+    "gulp": "^3.9.1",
+    "run-sequence": "^1.2.2"
+  },
+  "dependencies": {
+    "amazeui": "^2.7.0",
+    "jquery": "^2.1.4"
+  },
+  "browserify-shim": {
+    "jquery": "global:jQuery"
+  }
+}

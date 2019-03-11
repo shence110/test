@@ -1,0 +1,228 @@
+<!doctype html>
+<!--suppress ALL -->
+<html class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Tools</title>
+  <meta name="description" content="这是一个 help 页面">
+  <meta name="keywords" content="help">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <link rel="icon" type="image/png" href="../i/favicon.png">
+  <link rel="apple-touch-icon-precomposed" href="../i/app-icon72x72@2x.png">
+  <meta name="apple-mobile-web-app-title" content="Amaze UI" />
+  <link rel="stylesheet" href="../css/amazeui.min.css"/>
+  <link rel="stylesheet" href="../css/admin.css">
+  <link rel="stylesheet" href="../tree-master/dist/amazeui.tree.css"/>
+</head>
+<body>
+<!--[if lte IE 9]>
+<p class="browsehappy">你正在使用<strong>过时</strong>的浏览器，Amaze UI 暂不支持。 请 <a href="http://browsehappy.com/" target="_blank">升级浏览器</a>
+  以获得更好的体验！</p>
+<![endif]-->
+
+
+
+<div class="admin-sidebar am-offcanvas" id="admin-offcanvas">
+  <div class="am-offcanvas-bar admin-offcanvas-bar">
+
+    <div class="am-panel am-panel-default admin-sidebar-panel">
+      <div class="am-panel-bd">
+        <p><span class="am-icon-bookmark"></span> 库名</p>
+        <p><select data-am-selected>
+          <option value="a">Apple</option>
+          <option value="b" selected>Banana</option>
+          <option value="o">Orange</option>
+          <option value="m">Mango</option>
+          <option value="d" disabled>禁用鸟</option>
+        </select>
+        </p>
+      </div>
+    </div>
+
+    <ul class="am-tree" id="firstTree" style="margin-left: 40px;">
+      <li class="am-tree-branch am-hide" data-template="treebranch">
+        <div class="am-tree-branch-header">
+          <button class="am-tree-branch-name">
+            <span class="am-tree-icon am-tree-icon-folder"></span>
+            <span class="am-tree-label"></span>
+          </button>
+        </div>
+        <ul class="am-tree-branch-children"></ul>
+        <div class="am-tree-loader"><span class="am-icon-spin am-icon-spinner"></span></div>
+      </li>
+      <li class="am-tree-item am-hide" data-template="treeitem">
+        <button class="am-tree-item-name">
+          <span class="am-tree-icon am-tree-icon-item"></span>
+          <span class="am-tree-label"></span>
+        </button>
+      </li>
+    </ul>
+
+
+
+
+  </div>
+</div>
+
+
+
+
+  <!-- content start -->
+  <div class="admin-content">
+    <div class="admin-content-body">
+      <div class="am-cf am-padding am-padding-bottom-0">
+        <div class="am-fl am-cf">
+          <strong class="am-text-primary am-text-lg">帮助</strong> /
+          <small>Help </small>
+
+          <div class="am-g">
+            <div class="am-u-sm-12">
+              <form class="am-form">
+                <table class="am-table am-table-striped am-table-hover table-main">
+                  <thead>
+                  <tr>
+                    <th class="table-check"></th>
+                    <th class="table-title"> 表名 </th>
+                    <th class="table-title">行数</th>
+                    <th class="table-title">列数</th>
+                  </tr>
+                  </thead>
+                  <tbody id="cloumn1">
+
+
+                  </tbody>
+                </table>
+
+              </form>
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+
+      </div>
+
+
+
+      <hr/>
+
+      <div class="am-g">
+        <div class="am-u-sm-12 am-u-sm-centered">
+          <h2 id="table_name"></h2>
+        </div>
+
+
+
+        <div class="am-g">
+          <div class="am-u-sm-12">
+            <form class="am-form">
+              <table class="am-table am-table-striped am-table-hover table-main">
+                <thead>
+                <tr>
+                  <th class="table-check"></th>
+                  <th class="table-title"> 表名 </th>
+                  <th class="table-title">行数</th>
+                  <th class="table-title">列数</th>
+                </tr>
+                </thead>
+                <tbody id="cloumn">
+
+
+                </tbody>
+              </table>
+
+            </form>
+          </div>
+
+        </div>
+
+
+      </div>
+
+
+    </div>
+
+    <footer class="admin-content-footer">
+      <hr>
+      <p class="am-padding-left"></p>
+    </footer>
+
+  </div>
+  <!-- content end -->
+
+
+<a href="#" class="am-icon-btn am-icon-th-list am-show-sm-only admin-menu" data-am-offcanvas="{target: '#admin-offcanvas'}"></a>
+
+<footer>
+  <hr>
+  <p class="am-padding-left"></p>
+</footer>
+
+<!--[if lt IE 9]>
+<script src="http://libs.baidu.com/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://cdn.staticfile.org/modernizr/2.8.3/modernizr.js"></script>
+<script src="../js/amazeui.ie8polyfill.min.js"></script>
+<![endif]-->
+
+<!--[if (gte IE 9)|!(IE)]><!-->
+<script src="../js/jquery.min.js"></script>
+<!--<![endif]-->
+<script src="../js/amazeui.min.js"></script>
+<script src="../js/app.js"></script>
+<script src="../tree-master/dist/amazeui.tree.js"></script>
+</body>
+</html>
+<script>
+    var data1 =[];//
+    $(document).ready(function(){
+        getTableByDB('bimall');
+
+    });
+
+
+
+    //通过表名查询表结
+    function getTableByDB(name){
+
+        $.ajax({
+            url:'../getTableByDB',
+            type: 'POST',
+            dataType:'json',
+            data:{
+                "dbName":name,
+            },
+            success:function(data){
+                showTable(data.rows)
+            }
+        });
+    }
+
+    function showTable(data) {
+       var list =data ;
+        var html='';
+        for (var i = 0; i <data.length ; i++) {
+            html+='<tr id="" >\n' +
+                '<td>'+''+'</td> ' +
+                '<td>'+list[i].TABLE_NAME+'</td> ' +
+                '<td>'+list[i].NUM_ROWS+'</td>' +
+                '<td>'+list[i].NUM_COLUMNS+'</td>' +
+                '</tr>';
+        }
+
+        $('#cloumn').html('');
+        $('#cloumn').append(html);
+    }
+
+
+
+
+
+
+
+</script>

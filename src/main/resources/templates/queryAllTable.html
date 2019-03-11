@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>数据库合并</title>
+    <link rel="stylesheet" type="text/css" href="../jquery-easyui-1.7.0/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="../jquery-easyui-1.7.0/themes/icon.css">
+    <script type="text/javascript" src="../jquery-easyui-1.7.0/jquery.min.js"></script>
+    <script type="text/javascript" src="../jquery-easyui-1.7.0/jquery.easyui.min.js"></script>
+
+</head>
+<body>
+<div data-options="region: 'center',title: ''" style="padding: 0px;">
+    <div class="parentlayout" style="height: 100%">
+<div style="margin:20px 0;">
+    <div id="tb" style="padding:5px;height:auto">
+
+        <div>
+
+            <select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="onChange:uie_dgd_search" id="db">
+                <option value="bimall">合并库</option>
+                <option value="eafbim">项目测试库</option>
+                <option value="gwsbim">署级测试库</option>
+                <option value="wcjbim">第三人民医院</option>
+            </select>
+            <button  id="me" onclick="merge()" type="button" >合并</button>
+        </div>
+    </div>
+
+</div>
+    </div>
+</div>
+<table id="dg" title="Client Side Pagination" style="width:700px;height:300px" data-options="
+				rownumbers:true,
+				singleSelect:true,
+				autoRowHeight:false,
+				pagination:true,
+				pageSize:10">
+    <thead>
+    <tr>
+        <th field="tbName" width="80" data-options="sortable:true">表名</th>
+        <th field="row" width="100" data-options="sortable:true">行数</th>
+        <th field="column" width="80" data-options="sortable:true">列数</th>
+
+    </tr>
+    </thead>
+</table>
+
+<script>
+
+    function merge() {
+        var dbName =$('#db').combobox("getValue");
+        var selRows = $('#dg').datagrid('getChecked');
+        if (selRows.length ==0){
+            alert("请选择合并的表名称");
+            return;
+        }
+        var obj ={};
+        obj.tbs =selRows;
+        $.ajax({
+            url:'../mergeData',
+            type: 'POST',
+            dataType:'json',
+            data:{
+                "dbName":$('#db').combobox('getValue'),
+                "tbCollection":JSON.stringify(obj),
+            },
+            success:function(data){
+                if(data.err){
+                    alert(data.content) ;
+                    return;
+                }
+                var list = data.list;
+
+                var html ='';
+                for(var i=0;i<list.length;i++){
+                    html +=''+list[i].TABLE_NAME+'成功同步'+list[i].INSERT_COUNT+'条数据'
+                }
+                alert(html);
+
+            },
+            error:function(data){
+
+            }
+        });
+
+    }
+
+    function uie_dgd_search() {
+
+        var dbName =$('#db').combobox("getValue");
+
+        var masterDb;
+
+        for (var i=0; i<dbs.length;i++){
+            if (dbs.IS_MASTER == 1 ){
+                masterDb = dbs.id;
+            }
+        }
+        if (dbName == masterDb){
+            $('#me').attr('disabled',"true");
+        }else  $('#me').removeAttr("disabled");
+
+
+        $('#dg').datagrid('reload', {
+            'dbName': $('#db').combobox('getValue')
+        });
+        $('#dg').datagrid("clearSelections"); //清空选中项
+    }
+
+var dbs ;
+
+    function getAllDb() {
+        $.ajax({
+            url:'../getAllByDB',
+            type: 'POST',
+            dataType:'json',
+
+            success:function(data){
+
+                if(data.err){
+                   alert(data.content) ;
+                   return;
+                }
+                var list = data.list;
+                dbs =list;
+                var masterDb;
+                $('#db').combobox('setValues', list);
+                for (var i = 0; i < list.length; i++) {
+                    if(list[i].IS_MASTER ==1 ){
+                        $('#db').combobox('select',list[i].id);
+                        masterDb = list[i].id;
+                        $('#me').attr('disabled',"true");
+                    };
+                }
+
+
+
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                // 状态码
+                console.log(XMLHttpRequest.status);
+                // 状态
+                console.log(XMLHttpRequest.readyState);
+                // 错误信息
+                console.log(textStatus);
+                alert(textStatus);
+            }
+        });
+    };
+
+    function init() {
+        $('#dg').datagrid({
+            url:'../getTableByDB',
+            fit: true,
+            fitColumns:false,
+            queryParams: {
+                dbName: $('#db').combobox('getValue')
+            },
+            pageSize:20,
+            cache: false,
+            pageList:[20,50,100,200,500],
+            pagination:true,
+            pagePosition:'bottom',
+            rownumbers : true,
+            singleSelect  :false,
+            toolbar : '#weektb',
+            remoteSort:true,
+            border : false,
+
+            columns:[[
+                { field:'ck',checkbox:true },
+                {field:'TABLE_NAME',title:'表名',width:150},
+                {field:'NUM_ROWS',title:'行数',width:100,sortable:true},
+                {field:'NUM_COLUMNS',title:'列数',width:110,sortable:true}
+
+            ]],
+            onSelect: function (rowIndex, rowData) {//
+            }
+        });
+    }
+
+
+
+
+    $(function(){
+
+
+        getAllDb();
+        init();
+
+
+    });
+</script>
+</body>
+</html>
