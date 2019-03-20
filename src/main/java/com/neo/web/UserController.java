@@ -63,7 +63,6 @@ public class UserController {
         try{
             list= tbService.getAllByDB(dbArray, masterDataSource);
             result.put("list",list);
-            System.out.println("成功！");
         }catch (Exception e){
             result.put("err",true);
             result.put("content",e.getMessage());

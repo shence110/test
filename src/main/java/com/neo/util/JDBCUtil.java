@@ -1,5 +1,7 @@
 package com.neo.util;
 
+import com.neo.service.TbService;
+import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Field;
@@ -19,6 +21,11 @@ import java.util.*;
  *
  */
 public class JDBCUtil {
+
+    /**
+     * 日志对象
+     */
+    private Logger logger = Logger.getLogger(JDBCUtil.class);
 
     ApplicationContext context = SpringContextUtil.getApplicationContext();
 
@@ -185,7 +192,7 @@ public class JDBCUtil {
             }
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+           logger.error(e.getMessage());
         } finally {
             closeAll();
         }
@@ -216,7 +223,7 @@ public class JDBCUtil {
             // 获得结果集列数
             columnCount = rsmd.getColumnCount();
         } catch (SQLException e1) {
-            System.out.println(e1.getMessage());
+           logger.error(e1.getMessage());
         }
 
         // 创建List
@@ -232,8 +239,8 @@ public class JDBCUtil {
                 list.add(map);//每一个map代表一条记录，把所有记录存在list中
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            System.out.println(sql);
+           logger.error(e.getMessage());
+           logger.error(sql);
         } finally {
             // 关闭所有资源
             closeAll();
@@ -275,7 +282,7 @@ public class JDBCUtil {
             object = callableStatement.getObject(outParamPos);
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+           logger.error(e.getMessage());
         } finally {
             // 释放资源
             closeAll();
@@ -293,7 +300,7 @@ public class JDBCUtil {
             try {
                 rst.close();
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+               logger.error(e.getMessage());
             }
         }
 
@@ -302,7 +309,7 @@ public class JDBCUtil {
             try {
                 pst.close();
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+               logger.error(e.getMessage());
             }
         }
 
@@ -311,7 +318,7 @@ public class JDBCUtil {
             try {
                 callableStatement.close();
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+               logger.error(e.getMessage());
             }
         }
 
@@ -320,7 +327,7 @@ public class JDBCUtil {
             try {
                 conn.close();
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+               logger.error(e.getMessage());
             }
         }
     }

@@ -13,10 +13,7 @@
 
 <select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="valueField:'id',
 textField:'text',onChange:uie_dgd_search" id="db">
-    <!--<option value="bimall">合并库</option>-->
-    <!--<option value="eafbim">项目测试库</option>-->
-    <!--<option value="gwsbim">署级测试库</option>-->
-    <!--<option value="wcjbim">第三人民医院</option>-->
+
 </select>
 <button  id="me" onclick="merge()" type="button" >合并</button>
 
@@ -38,7 +35,12 @@ textField:'text',onChange:uie_dgd_search" id="db">
 
 
 <script>
-
+    $(function(){
+        //查询所有数据源
+        getAllDb();
+        //初始化列表
+        init();
+    });
     function merge() {
         var dbName =$('#db').combobox("getValue");
         var selRows = $('#dg').datagrid('getChecked');
@@ -178,14 +180,7 @@ var dbs ;
 
 
 
-    $(function(){
 
-
-        getAllDb();
-        init();
-
-
-    });
 </script>
 </body>
 </html>

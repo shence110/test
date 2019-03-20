@@ -95,8 +95,9 @@ public class TbService {
                 }
 
          tbCollection =  jdbcUtil.excuteQuery(sql,new Object[][]{});
-        System.out.println(new Gson().toJson(tbCollection));
 
+
+        logger.info(new Gson().toJson(tbCollection));
 
         map.put("rows",tbCollection);
         map.put("total",tbCollection.size());
@@ -534,11 +535,10 @@ public class TbService {
      * @return
      */
     public List<Map<String,Object>> getAllByDB(String dbArray, String masterDataSource) {
-
         List<Map<String,Object>> list =new ArrayList<>();
         JSONArray jsonArray = JSONArray.parseArray(dbArray);
         JSONObject jsonObject =null;
-        //List <String> jsonArray= CollectionUtil.stringToList(dbArray);
+
         for (int i = 0; i <jsonArray.size() ; i++) {
             jsonObject = (JSONObject) jsonArray.get(i);
             Map<String,Object> map =new HashMap<>();
