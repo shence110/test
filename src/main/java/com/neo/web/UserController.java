@@ -58,9 +58,6 @@ public class UserController {
     @ResponseBody
     public String getAllByDB() {
 
-        Environment environment = SpringContextUtil.getApplicationContext().getEnvironment();
-//        String masterDataSource = environment.getProperty("spring.master.datasource");
-//        String dbArray = environment.getProperty("spring.dbs");
         List<Map<String, Object>> list = null ;
         Map<String,Object> result =new HashMap<>();
         try{

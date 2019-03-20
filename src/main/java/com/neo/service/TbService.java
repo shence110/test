@@ -12,16 +12,22 @@ import com.neo.mapper.gwsbim.GwsbimMapper;
 import com.neo.mapper.wcjbim.WcjbimMapper;
 import com.neo.util.*;
 import com.sun.corba.se.spi.ior.ObjectKey;
+import oracle.sql.BLOB;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.util.DateUtils;
 
 import java.io.IOException;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * @Auther: Administrator
@@ -31,6 +37,10 @@ import java.util.*;
 @Service
 public class TbService {
 
+    /**
+     * 日志对象
+     */
+    private Logger logger = Logger.getLogger(TbService.class);
     @Autowired
     private EafbimMapper eafbimMapper;
 
@@ -93,11 +103,19 @@ public class TbService {
         return map;
     }
 
+
     /**
      * 合并数据
+     * @param dbName
+     * @param tbName
+     * @param masterDataSource
+     * @param list
+     * @param groupSize
      * @return
+     * @throws IOException
+     * @throws SQLException
      */
-    public Integer mergeData(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize) throws IOException, SQLException {
+    public Integer mergeData(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize) throws IOException, SQLException, ExecutionException, InterruptedException {
         int insertCount =0;
         int count =0;
         List<Map<String,Object>> tableStructure = null;
@@ -153,10 +171,28 @@ public class TbService {
      * @param paramsMap
      * @return
      */
-    private int insert(Map<String,Object> paramsMap) {
+    private int insert(final Map<String,Object> paramsMap) throws ExecutionException, InterruptedException {
         JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
         String sql = paramsMap.get("sqlInsert")+"";
         return jdbcUtil.executeUpdate(sql,new Object[][]{});
+//        Future<?> future =  ThreadPoolUtils.getInstance().submit(new Callable<Integer>(){
+//            @Override
+//            public Integer call() {
+//                Date startDatetime,endDatetime;
+//                try {
+//                    startDatetime = new Date();
+//                    return jdbcUtil.executeUpdate(sql,new Object[][]{});
+//                }catch(Exception e) {
+//                    logger.error("数据同步 exception!",e);
+//                    return 0;
+//                }
+//
+//            }
+//        });
+//        int count = (Integer) future.get();
+//        System.out.println("成功执行"+count+"条数据");
+//       return count ;
+
     }
 
     /**
@@ -278,7 +314,7 @@ public class TbService {
     }
 
     /**
-     *
+     * 通过库名和表名查询所有数据
      * @param dbName
      * @param tbName
      * @param paramsMap
@@ -325,7 +361,7 @@ public class TbService {
     }
 
     /**
-     *
+     * 获取插入sql
      * @param tbName
      * @param newData
      * @param tb
@@ -375,7 +411,7 @@ public class TbService {
 
                             }
                             if ( key.equals(ma.get("COLUMN_NAME")+"")
-                                    && "CLOB".equals(ma.get("DATA_TYPE")) && map.get(key)!=null  ){
+                                    && ("CLOB".equals(ma.get("DATA_TYPE")) ||"BLOB".equals(ma.get("DATA_TYPE"))  )&& map.get(key)!=null  ){
                                 sqlInsert += " '"+getValueByType(map,key,ma.get("DATA_TYPE")+"")+"' ";
                                 flag =true ;
                                 break;
@@ -404,7 +440,7 @@ public class TbService {
                                 break;
                             }
                             if ( key.equals(ma.get("COLUMN_NAME")+"")
-                                    && "CLOB".equals(ma.get("DATA_TYPE"))  && map.get(key)!=null ){
+                                    && ("CLOB".equals(ma.get("DATA_TYPE")) ||"BLOB".equals(ma.get("DATA_TYPE")) ) && map.get(key)!=null ){
                                 sqlInsert += " '"+getValueByType(map,key,ma.get("DATA_TYPE")+"")+"', ";
                                 flag =true ;
                                 break;
@@ -430,16 +466,29 @@ public class TbService {
 
     }
 
+    /**
+     * 根据数据类型获得值
+     * @param map
+     * @param key
+     * @param data_type
+     * @return
+     * @throws IOException
+     * @throws SQLException
+     */
     private String getValueByType(Map<String, Object> map, String key, String data_type) throws IOException, SQLException {
         if ("CLOB".equals(data_type)){
             Clob columnClob = (Clob) map.get(key);
             return StringUtils.ClobToString(columnClob);
         }
+        if ("BLOB".equals(data_type)){
+            BLOB columnClob = (BLOB) map.get(key);
+            return StringUtils.BlobToString(columnClob);
+        }
         return null;
     }
 
     /**
-     *
+     * 获取创建表的sql
      * @param tbName
      * @param tableStructure
      * @param param
@@ -478,17 +527,25 @@ public class TbService {
         param.put("sql",sql);
     }
 
+    /**
+     * 获得所有数据库
+     * @param dbArray
+     * @param masterDataSource
+     * @return
+     */
     public List<Map<String,Object>> getAllByDB(String dbArray, String masterDataSource) {
-        System.out.println(dbArray);
+
         List<Map<String,Object>> list =new ArrayList<>();
-        List <String> jsonArray= CollectionUtil.stringToList(dbArray);
+        JSONArray jsonArray = JSONArray.parseArray(dbArray);
+        JSONObject jsonObject =null;
+        //List <String> jsonArray= CollectionUtil.stringToList(dbArray);
         for (int i = 0; i <jsonArray.size() ; i++) {
+            jsonObject = (JSONObject) jsonArray.get(i);
             Map<String,Object> map =new HashMap<>();
-            map.put("id",jsonArray.get(i)+"");
-            map.put("text",jsonArray.get(i)+"");
+            map.put("id",jsonObject.get("value")+"");
+            map.put("text",jsonObject.get("text")+"");
 
-
-            if (masterDataSource.equals(jsonArray.get(i)+"")){
+            if (masterDataSource.equals(jsonObject.get("value")+"")){
                 map.put("IS_MASTER",1);
                 map.put("selected",true);
 
