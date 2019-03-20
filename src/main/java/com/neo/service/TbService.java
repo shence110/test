@@ -138,9 +138,11 @@ public class TbService {
         Map<String, Object> paramsMap = new HashMap<>();
         paramsMap.put("tbName", tbName);
 
+        long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
         List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap);
-
+        long queryEnd =System.currentTimeMillis();
+        logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
         List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, groupSize);
         for (int i = 0; i < newData.size(); i++) {
@@ -150,6 +152,8 @@ public class TbService {
 
         }
         //插入新数据
+        ThreadPoolUtils threadPoolUtils=  ThreadPoolUtils.getInstance();
+        List<Future<Integer>> results = new ArrayList<Future<Integer>>();
         for (List<Map<String, Object>> dat : newData) {
             String sqlInsert = getInsertSql(tbName, dat, newData, tb);
 
@@ -158,11 +162,29 @@ public class TbService {
 
             paramsMap.put("sqlInsert", sqlInsert);
 
+            Future<Integer> future= (Future<Integer>) threadPoolUtils.submit(new Callable<Integer>(){
+            @Override
+            public Integer call() {
+                try {
+                    JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+                    String sql = paramsMap.get("sqlInsert")+"";
+                    return jdbcUtil.executeUpdate(sql,new Object[][]{});
+                }catch(Exception e) {
+                    logger.error("数据同步 exception!",e);
+                    return 0;
+                }
 
-            insertCount += insert(paramsMap);
+            }
+        });
+            results.add(future);
+
+           // insertCount += insert(paramsMap);
 
 
         }
+        for(Future<Integer> res : results)
+            insertCount +=  res.get();
+
 
         return insertCount;
     }

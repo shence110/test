@@ -8,6 +8,7 @@ import com.neo.service.TbService;
 import com.neo.util.JDBCUtil;
 import com.neo.util.SpringContextUtil;
 import com.neo.util.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -44,13 +45,12 @@ public class UserController {
     public String groupSize;
 
 
-
+    private Logger logger = Logger.getLogger(UserController.class);
 
 
 
     @RequestMapping("/")
-    public String index(Model model, Long id) {
-        ////        return "/admin-help";
+    public String index() {
       return "/queryAllTable";
 
     }
@@ -97,9 +97,9 @@ public class UserController {
         Map<String,Object> resu =new HashMap<>();
         String tbName = null;
         try{
+          Long start =   System.currentTimeMillis();
             groupSiz= Integer.valueOf(   groupSize  );
             list = getParamList(tbCollection, "tbs");
-
             for (Map<String, Object> map : list) {
                 tbName = map.get("TABLE_NAME") + "";
                 Map<String, String> resultMap = new HashMap();
@@ -108,7 +108,8 @@ public class UserController {
                 result.add(resultMap);
             }
             resu.put("list",result);
-
+            Long end =   System.currentTimeMillis();
+            logger.info("插入数据所花费的时间为"+ (end-start) /1000 +"s");
         }catch (Exception e){
             resu.put("err",true);
             resu.put("content",e.getMessage());
