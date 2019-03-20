@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -90,15 +91,15 @@ public class UserController {
     @RequestMapping("/mergeData")
     @ResponseBody
     public String mergeData(String dbName, String tbCollection) throws Exception {
-
-        int groupSiz = Integer.valueOf(   groupSize  );
-
-        List<Map<String, Object>> list = getParamList(tbCollection, "tbs");
-
+        int groupSiz = 0; //每张表数据插入多次 一次插入的数据条数
+        List<Map<String, Object>> list = null;
         List<Map<String, String>> result = new ArrayList<>();
         Map<String,Object> resu =new HashMap<>();
         String tbName = null;
         try{
+            groupSiz= Integer.valueOf(   groupSize  );
+            list = getParamList(tbCollection, "tbs");
+
             for (Map<String, Object> map : list) {
                 tbName = map.get("TABLE_NAME") + "";
                 Map<String, String> resultMap = new HashMap();
