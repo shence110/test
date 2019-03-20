@@ -10,25 +10,13 @@
 
 </head>
 <body>
-<!--<div data-options="region: 'center',title: ''" style="padding: 0px;">
-    <div class="parentlayout" style="height: 100%" >
-<div style="margin:20px 0;">
-    <div id="tb" style="padding:5px;height:auto">
 
-        <div>
-
-
-        </div>
-    </div>
-
-</div>
-    </div>
-</div>-->
-<select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="onChange:uie_dgd_search" id="db">
-    <option value="bimall">合并库</option>
-    <option value="eafbim">项目测试库</option>
-    <option value="gwsbim">署级测试库</option>
-    <option value="wcjbim">第三人民医院</option>
+<select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="valueField:'id',
+textField:'text',onChange:uie_dgd_search" id="db">
+    <!--<option value="bimall">合并库</option>-->
+    <!--<option value="eafbim">项目测试库</option>-->
+    <!--<option value="gwsbim">署级测试库</option>-->
+    <!--<option value="wcjbim">第三人民医院</option>-->
 </select>
 <button  id="me" onclick="merge()" type="button" >合并</button>
 
@@ -128,7 +116,9 @@ var dbs ;
                 var list = data.list;
                 dbs =list;
                 var masterDb;
-                $('#db').combobox('setValues', list);
+                debugger;
+                $('#db').combobox('loadData', list);
+
                 for (var i = 0; i < list.length; i++) {
                     if(list[i].IS_MASTER ==1 ){
                         $('#db').combobox('select',list[i].id);
@@ -151,6 +141,8 @@ var dbs ;
             }
         });
     };
+
+
 
     function init() {
         $('#dg').datagrid({
