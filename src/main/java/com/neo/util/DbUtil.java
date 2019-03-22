@@ -38,6 +38,10 @@ public class DbUtil {
         conn = connection ;
     }
 
+    public Connection getConn() {
+        return conn;
+    }
+
     /**
      * 获取结果集，并将结果放在List中
      *
@@ -266,6 +270,45 @@ public class DbUtil {
             return StringUtils.BlobToString(columnClob);
         }
         return null;
+    }
+
+    public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws SQLException {
+        String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
+        ;
+        int[] result = null;//批量插入返回的数组
+        String columnName = null;//列名
+        PreparedStatement pst = null;
+        if (uniqueList.size() == 1) {
+            columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
+            sql += " and " + columnName + " =  ? ";
+            pst = conn.prepareStatement(sql);
+            for (Map<String, Object> map : data) {
+                pst.setObject(1, map.get(columnName) + "");
+                pst.addBatch();
+            }
+            result = pst.executeBatch();
+        } else if ((uniqueList.size() > 1)) {
+            //sql 预编译
+            int k = 0;
+            String[] arr = new String[uniqueList.size()];
+            for (Map<String, Object> uniqueMap : uniqueList) {
+                columnName = uniqueMap.get("COLUMN_NAME") + "";
+                sql += " and " + columnName + " =  ? ";
+                arr[k] = columnName;
+                k++;
+            }
+            pst = conn.prepareStatement(sql);
+            //批量插入
+            for (Map<String, Object> map : data) {
+                for (int i = 0; i < arr.length; i++) {
+                    pst.setObject(i + 1, map.get(arr[i]) + "");
+                }
+                pst.addBatch();
+            }
+            result = pst.executeBatch();
+        }
+        conn.commit();
+        return result.length;
     }
 
 }
