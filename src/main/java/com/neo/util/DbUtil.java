@@ -166,17 +166,16 @@ public class DbUtil {
 
     public int batchInsertJsonArry(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct){
         long start = System.currentTimeMillis();
-
         String  sql= null;
         int[] result= null;
         PreparedStatement pst ;
         try {
             sql =  getInsertSql1( tbName,  newData);
+            conn.setAutoCommit(false);
             pst = conn.prepareStatement(sql.toString());
             result =  insertBatch(tbName , newData, pst,tbstruct);
-
             long end = System.currentTimeMillis();
-            logger.info("批量插入需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:24675
+            logger.info("批量插入需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
             return result.length ;
         } catch (Exception e) {
            logger.error(sql.toString(),e);
@@ -226,9 +225,7 @@ public class DbUtil {
                 for (Map<String, Object> structure:tbstruct) {
                    cloumnName =structure.get("COLUMN_NAME")+"";
                    dataType =structure.get("DATA_TYPE")+"";
-
                     if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
-                        //value =" TO_DATE('"+ DateUtil.splitDate(value) +"',  'YYYY/MM/DD HH24:mi:ss' ) " ;
                         value =   value.substring(0,value.indexOf("."));
                         dateValue = DateUtil.strToDate(value);
                         flag =true;
@@ -247,6 +244,7 @@ public class DbUtil {
             }
             pst.addBatch();
             ik = pst.executeBatch();
+            conn.commit();
         }
         return  ik;
     }
