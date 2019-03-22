@@ -170,12 +170,13 @@ public class DbUtil {
         int[] result= null;
         PreparedStatement pst ;
         try {
-            sql =  getInsertSql1( tbName,  newData);
+            sql =  getInsertSql( tbName,  newData);
             conn.setAutoCommit(false);
             pst = conn.prepareStatement(sql.toString());
             result =  insertBatch(tbName , newData, pst,tbstruct);
             long end = System.currentTimeMillis();
             logger.info("批量插入需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
+            logger.info("批量插入了:"+result.length+"条数据"); //批量插入需要时间:
             return result.length ;
         } catch (Exception e) {
            logger.error(sql.toString(),e);
@@ -185,14 +186,12 @@ public class DbUtil {
 
     }
 
-    private String getInsertSql1(String tbName, List<Map<String, Object>> newData) {
-
+    private String getInsertSql(String tbName, List<Map<String, Object>> newData) {
         StringBuilder sql = new StringBuilder();
         Map<String,Object> m= (Map<String,Object>)newData.get(0);
         sql.append("insert into "+tbName+" (");
         for (Map.Entry<String, Object> mm:  m.entrySet()) {
             sql .append(mm.getKey()+",") ;
-
         }
         sql.deleteCharAt(sql.length()-1);
         sql .append(" ) values (");
@@ -270,12 +269,13 @@ public class DbUtil {
         return null;
     }
 
-    public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws SQLException {
+    public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws Exception {
         String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
-        ;
+
         int[] result = null;//批量插入返回的数组
         String columnName = null;//列名
         PreparedStatement pst = null;
+        if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
         if (uniqueList.size() == 1) {
             columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
             sql += " and " + columnName + " =  ? ";

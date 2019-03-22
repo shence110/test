@@ -136,6 +136,7 @@ public class TbService {
         long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
         List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap,salverDbUtil);
+        if (data.size()==0) return 0;
         Map<String,Object> m =(Map<String,Object>)data.get(0);
 
 
@@ -147,12 +148,7 @@ public class TbService {
         logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
         List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, groupSize);
-     /*   for (int i = 0; i < newData.size(); i++) {
-            paramsMap.put("list", newData.get(i));
-            //删除合并库多余的数据
-            int delCount = deleteData(paramsMap,dbName,masterDbUtil);
 
-        }*/
 
         int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil);
 
@@ -193,9 +189,8 @@ public class TbService {
         return insertCount;
     }
 
-    private int batchDelete(Map<String, Object> paramsMap, String tbName, List<Map<String, Object>> data, DbUtil masterDbUtil) throws SQLException {
+    private int batchDelete(Map<String, Object> paramsMap, String tbName, List<Map<String, Object>> data, DbUtil masterDbUtil) throws Exception {
         List<Map<String, Object>> uniqueList = getUniqueConstriant(paramsMap, masterDbUtil);
-
         return masterDbUtil.batchDelete(data, uniqueList, tbName);
 
     }
