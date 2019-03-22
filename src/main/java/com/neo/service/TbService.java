@@ -29,9 +29,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * @Auther: Administrator
@@ -69,8 +67,8 @@ public class TbService {
     @Value("${uniqueConstraint}")
     public String uniqueConstraint;
 
-    @Value("${ThreadNums}")
-    public String ThreadNums;
+    @Value("${openMulitiThreads}")
+    public String openMulitiThreads;
 
     /**
      *
@@ -130,7 +128,7 @@ public class TbService {
 
         int insertCount =0;
         int count =0;
-        int threadNums = Integer.valueOf(ThreadNums) ;//获得执行的线程数
+        int threadFlag = Integer.valueOf(openMulitiThreads) ;//是否开启多线程
         List<Map<String,Object>> tableStructure = null;
         Map<String,Object> param =new HashMap<>();
         //查询被导入数据库的表结构
@@ -170,54 +168,49 @@ public class TbService {
             int delCount = deleteData(paramsMap,dbName,masterDbUtil);
 
         }
-        //插入新数据
-        ThreadPoolUtils threadPoolUtils=  ThreadPoolUtils.getInstance();
-        List<Future<Integer>> results = new ArrayList<Future<Integer>>();
-        for (List<Map<String, Object>> dat : newData) {
-           // String sqlInsert = getInsertSql(tbName, dat, newData, tb);
-           // String sqlInsert = getInsertSql1(tbName,  dat);
-          //  Object[][] params =getParams(tbName,dat);
 
 
-           // sqlInsert += " SELECT 1 FROM DUAL ";
+        if (threadFlag ==0 ){ //不开启多线程
+            for (List<Map<String, Object>> dat : newData) {
+                insertCount += masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+            }
+        }else{
+            final BlockingQueue<Future<Integer>> queue = new LinkedBlockingQueue<>();
+           // final CountDownLatch startLock = new CountDownLatch(1); //启动门，当所有线程就绪时调用countDown
+            final CountDownLatch  endLock = new CountDownLatch(newData.size()); //结束门
+            List<Future<Integer>> results = new ArrayList<Future<Integer>>();
+            //ThreadPoolUtils threadPoolUtils= ThreadPoolUtils.getInstance();
+             final ExecutorService exec = Executors.newFixedThreadPool(newData.size());
 
-            //paramsMap.put("sqlInsert", sqlInsert);
+            for (List<Map<String, Object>> dat : newData ) {
 
-            if (threadNums >1 ){
-                Future<Integer> future= (Future<Integer>) threadPoolUtils.submit(new Callable<Integer>(){
+                Future<Integer> future= //(Future<Integer>) threadPoolUtils
+                        exec.submit(new Callable<Integer>(){
                     @Override
                     public Integer call() {
-                       // JDBCUtil jdbcUtil =null;
+                        // JDBCUtil jdbcUtil =null;
+
                         try {
-                            // jdbcUtil =new JDBCUtil(masterDataSource);
-                            //String sql = paramsMap.get("sqlInsert")+"";
+                          //  startLock.await();
                             return masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
                         }catch(Exception e) {
                             logger.error("数据同步 exception!",e);
                             return 0;
+                        }finally {
+                            endLock.countDown(); //线程执行完毕，结束门计数器减1
                         }
 
                     }
                 });
-                results.add(future);
+                queue.add(future);
             }
-            else {
-                insertCount += masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
-                        //insert(paramsMap,masterDbUtil);
-            }
-
-        }
-        //
-        if (threadNums >1 ) {
-            for (Future<Integer> res : results){
-                if (res.isCancelled() || res.isDone()) {
-                    insertCount += res.get();
-                }
-            }
-
+            // startLock.countDown(); //所有任务添加完毕，启动门计数器减1，这时计数器为0，所有添加的任务开始执行
+            endLock.await(); //主线程阻塞，直到所有线程执行完成
+            for(Future<Integer> future : queue)  insertCount +=future.get();
+            exec.shutdown(); //关闭线程池
         }
 
-        if (null!= threadPoolUtils) threadPoolUtils.shutdown(true);
+
         return insertCount;
     }
 
@@ -368,8 +361,6 @@ public class TbService {
      * @return
      */
     private int createNewTable(Map<String,Object> param,DbUtil dbUtil ) {
-       // JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
-       // DbUtil dbUtil =new DbUtil(connection) ;
         String sql = param.get("sql")+"";
         return dbUtil.executeUpdate(sql,new Object[][]{});
     }
