@@ -93,12 +93,12 @@ public class JDBCUtil {
 
 
     /**
-     * insert update delete SQL语句的执行的统一方法
+     * insert update delete SQL语句的执行的统一方法 执行完关闭连接
      * @param sql SQL语句
      * @param params 参数数组，若没有参数则为null
      * @return 受影响的行数
      */
-    public int executeUpdate(String sql, Object[] params) {
+    public int executeUpdate(String sql, Object[] params,boolean isCloseConn) {
         // 受影响的行数
         int affectedLine = 0;
 
@@ -125,7 +125,10 @@ public class JDBCUtil {
             System.out.println(sql);
         } finally {
             // 释放资源
-            closeAll();
+            if (isCloseConn){
+                closeAll();
+            }
+
         }
         return affectedLine;
     }
@@ -294,7 +297,7 @@ public class JDBCUtil {
     /**
      * 关闭所有资源
      */
-    private void closeAll() {
+    public void closeAll() {
         // 关闭结果集对象
         if (rst != null) {
             try {

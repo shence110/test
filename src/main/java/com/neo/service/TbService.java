@@ -21,7 +21,11 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.util.DateUtils;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.sql.Clob;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.util.*;
@@ -65,6 +69,9 @@ public class TbService {
     @Value("${uniqueConstraint}")
     public String uniqueConstraint;
 
+    @Value("${ThreadNums}")
+    public String ThreadNums;
+
     /**
      *
      * @param dbName
@@ -75,30 +82,28 @@ public class TbService {
      * @return
      */
     public Map<String,Object> getTableByDB(String dbName, String page,
-                                                 String rows, String sort, String order){
+                                           String rows, String sort, String order, Connection connection){
         List<Map<String,Object>>  tbCollection = null ;
         Map<String,Object> map =new HashMap<>();
         Map<String,Object> param =new HashMap<>();
         param.put("sort",sort);
         param.put("order",order);
 
-        Environment environment = SpringContextUtil.getApplicationContext().getEnvironment();
-        String masterDataSource = environment.getProperty("spring.master.datasource");
+       // Environment environment = SpringContextUtil.getApplicationContext().getEnvironment();
+        //String masterDataSource = environment.getProperty("spring.master.datasource");
 
-        if ("".equals(dbName)) dbName =masterDataSource;
+        //if ("".equals(dbName)) dbName =masterDataSource;
 
-        JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+       // JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+        DbUtil db = new DbUtil(connection);
         String sql =" select t.table_name, count_rows(t.table_name)  num_rows,\n" +
                 "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n" ;
                 if(sort!=null && !"".equals(sort)){
                     sql+= "  ORDER BY "+sort+" "+order;
                 }
 
-         tbCollection =  jdbcUtil.excuteQuery(sql,new Object[][]{});
-
-
-        logger.info(new Gson().toJson(tbCollection));
-
+        // tbCollection =  jdbcUtil.excuteQuery(sql,new Object[][]{});
+        tbCollection = db.excuteQuery(sql,new Object[][]{});
         map.put("rows",tbCollection);
         map.put("total",tbCollection.size());
         return map;
@@ -116,21 +121,28 @@ public class TbService {
      * @throws IOException
      * @throws SQLException
      */
-    public Integer mergeData(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize) throws IOException, SQLException, ExecutionException, InterruptedException {
+    public Integer mergeData(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize,
+    Connection masterConn,Connection slaverConn
+    ) throws Exception {
+
+        DbUtil masterDbUtil =new DbUtil(masterConn);
+        DbUtil salverDbUtil =new DbUtil(slaverConn);
+
         int insertCount =0;
         int count =0;
+        int threadNums = Integer.valueOf(ThreadNums) ;//获得执行的线程数
         List<Map<String,Object>> tableStructure = null;
         Map<String,Object> param =new HashMap<>();
         //查询被导入数据库的表结构
-        List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName);
+        List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName,salverDbUtil);
         //该主库是否存在此表
-        count = checkTable(tbName);
+        count = checkTable(tbName,masterDbUtil);
 
 
-        if (0 == count) {//若不存在则创建新表
-            tableStructure = selectTableStructureByDbAndTb(dbName, tbName);
-            getCreateTableSql(tbName, tableStructure, param);
-            int i =createNewTable(param);
+        if (0 == count) {//若不存在则主数据源创建新表
+           // tableStructure = selectTableStructureByDbAndTb(dbName, tbName,masterConn);
+            getCreateTableSql(tbName, tb, param);
+            int i =createNewTable(param,masterDbUtil);
 
         }
 
@@ -140,7 +152,14 @@ public class TbService {
 
         long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
-        List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap);
+        List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap,salverDbUtil);
+        Map<String,Object> m =(Map<String,Object>)data.get(0);
+
+
+
+
+
+
         long queryEnd =System.currentTimeMillis();
         logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
@@ -148,45 +167,93 @@ public class TbService {
         for (int i = 0; i < newData.size(); i++) {
             paramsMap.put("list", newData.get(i));
             //删除合并库多余的数据
-            int delCount = deleteData(paramsMap,dbName);
+            int delCount = deleteData(paramsMap,dbName,masterDbUtil);
 
         }
         //插入新数据
         ThreadPoolUtils threadPoolUtils=  ThreadPoolUtils.getInstance();
         List<Future<Integer>> results = new ArrayList<Future<Integer>>();
         for (List<Map<String, Object>> dat : newData) {
-            String sqlInsert = getInsertSql(tbName, dat, newData, tb);
+           // String sqlInsert = getInsertSql(tbName, dat, newData, tb);
+           // String sqlInsert = getInsertSql1(tbName,  dat);
+          //  Object[][] params =getParams(tbName,dat);
 
 
-            sqlInsert += " SELECT 1 FROM DUAL ";
+           // sqlInsert += " SELECT 1 FROM DUAL ";
 
-            paramsMap.put("sqlInsert", sqlInsert);
+            //paramsMap.put("sqlInsert", sqlInsert);
 
-            Future<Integer> future= (Future<Integer>) threadPoolUtils.submit(new Callable<Integer>(){
-            @Override
-            public Integer call() {
-                try {
-                    JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
-                    String sql = paramsMap.get("sqlInsert")+"";
-                    return jdbcUtil.executeUpdate(sql,new Object[][]{});
-                }catch(Exception e) {
-                    logger.error("数据同步 exception!",e);
-                    return 0;
-                }
+            if (threadNums >1 ){
+                Future<Integer> future= (Future<Integer>) threadPoolUtils.submit(new Callable<Integer>(){
+                    @Override
+                    public Integer call() {
+                       // JDBCUtil jdbcUtil =null;
+                        try {
+                            // jdbcUtil =new JDBCUtil(masterDataSource);
+                            //String sql = paramsMap.get("sqlInsert")+"";
+                            return masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+                        }catch(Exception e) {
+                            logger.error("数据同步 exception!",e);
+                            return 0;
+                        }
 
+                    }
+                });
+                results.add(future);
             }
-        });
-            results.add(future);
-
-           // insertCount += insert(paramsMap);
-
+            else {
+                insertCount += masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+                        //insert(paramsMap,masterDbUtil);
+            }
 
         }
-        for(Future<Integer> res : results)
-            insertCount +=  res.get();
+        //
+        if (threadNums >1 ) {
+            for (Future<Integer> res : results){
+                if (res.isCancelled() || res.isDone()) {
+                    insertCount += res.get();
+                }
+            }
 
+        }
 
+        if (null!= threadPoolUtils) threadPoolUtils.shutdown(true);
         return insertCount;
+    }
+
+    private Object[][] getParams(String tbName, List<Map<String, Object>> dat) {
+        Map<String,Object> m =(Map<String,Object>)dat.get(0);
+        Object[][] params =new Object[dat.size()][m.size()];
+        for (int i = 0; i <dat.size() ; i++) {
+            Map<String,Object> ma =(Map<String,Object>)dat.get(i);
+            int j=0;
+            for (String k:ma.keySet()) {
+                params[i][j]= String.valueOf(ma.get(k));
+                j++;
+            }
+
+        }
+        return  params;
+    }
+
+    private String getInsertSql1(String tbName, List<Map<String, Object>> newData) {
+
+        StringBuilder sql = new StringBuilder();
+        Map<String,Object> m= (Map<String,Object>)newData.get(0);
+        sql.append("insert into "+tbName+" (");
+        for (Map.Entry<String, Object> mm:  m.entrySet()) {
+            sql .append(mm.getKey()+",") ;
+
+        }
+        sql.deleteCharAt(sql.length()-1);
+        sql .append(" ) values (");
+
+        for (int i=0;i<m.size();i++) {
+            sql .append(" ?,");
+        }
+        sql.deleteCharAt(sql.length()-1);
+        sql .append(" ) ");
+        return sql.toString();
     }
 
     /**
@@ -194,27 +261,11 @@ public class TbService {
      * @param paramsMap
      * @return
      */
-    private int insert(final Map<String,Object> paramsMap) throws ExecutionException, InterruptedException {
-        JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+    private int insert(final Map<String,Object> paramsMap,DbUtil dbUtil) throws ExecutionException, InterruptedException {
+        //JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
         String sql = paramsMap.get("sqlInsert")+"";
-        return jdbcUtil.executeUpdate(sql,new Object[][]{});
-//        Future<?> future =  ThreadPoolUtils.getInstance().submit(new Callable<Integer>(){
-//            @Override
-//            public Integer call() {
-//                Date startDatetime,endDatetime;
-//                try {
-//                    startDatetime = new Date();
-//                    return jdbcUtil.executeUpdate(sql,new Object[][]{});
-//                }catch(Exception e) {
-//                    logger.error("数据同步 exception!",e);
-//                    return 0;
-//                }
-//
-//            }
-//        });
-//        int count = (Integer) future.get();
-//        System.out.println("成功执行"+count+"条数据");
-//       return count ;
+        return dbUtil.executeUpdate(sql,new Object[][]{});
+
 
     }
 
@@ -224,7 +275,8 @@ public class TbService {
      * @param dbName
      * @return
      */
-    private int deleteData(Map<String,Object> paramsMap,String dbName) {
+    private int deleteData(Map<String,Object> paramsMap,String dbName,DbUtil dbUtil) {
+       // DbUtil dbUtil =new DbUtil(connection);
         String columnName = null;
         int k=0;
         int j=0;
@@ -267,8 +319,8 @@ public class TbService {
             }
         }
 
-        JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
-        return jdbcUtil.executeUpdate(sql,new Object[][]{});
+        //JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+        return dbUtil.executeUpdate(sql,new Object[][]{});
     }
 
     /**
@@ -315,10 +367,11 @@ public class TbService {
      * @param param
      * @return
      */
-    private int createNewTable(Map<String,Object> param) {
-        JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+    private int createNewTable(Map<String,Object> param,DbUtil dbUtil ) {
+       // JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+       // DbUtil dbUtil =new DbUtil(connection) ;
         String sql = param.get("sql")+"";
-        return jdbcUtil.executeUpdate(sql,new Object[][]{});
+        return dbUtil.executeUpdate(sql,new Object[][]{});
     }
 
     /**
@@ -326,10 +379,13 @@ public class TbService {
      * @param tbName
      * @return
      */
-    private int checkTable( String tbName) {
-        JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
+    private int checkTable( String tbName,DbUtil dbUtil) throws Exception{
+       // DbUtil dbUtil =new DbUtil(connection) ;
+       // JDBCUtil jdbcUtil =new JDBCUtil(masterDataSource);
         String sql =" SELECT COUNT(*) TABLE_NUMS FROM User_Tables WHERE table_name = '"+tbName+"' " ;
-        List<Map<String,Object>> list = jdbcUtil.excuteQuery(sql,new Object[][]{});
+        List<Map<String,Object>> list =dbUtil.excuteQuery(sql,new Object[][]{});
+                //jdbcUtil.excuteQuery(sql,new Object[][]{});
+
         String count =list.get(0).get("TABLE_NUMS")+"";
         if ("1".equals(count) ) return 1;
         else return 0;
@@ -343,11 +399,12 @@ public class TbService {
      * @param paramsMap
      * @return
      */
-    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,Map<String,Object> paramsMap) {
-        JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,Map<String,Object> paramsMap,  DbUtil dbUtil) {
+       // JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+        //DbUtil dbUtil =new DbUtil(connection);
         String sql =" select * from "+tbName;
 
-        return jdbcUtil.excuteQuery(sql,new Object[][]{});
+        return dbUtil.excuteQuery(sql,new Object[][]{});
     }
 
     /**
@@ -356,8 +413,9 @@ public class TbService {
      * @param tbName
      * @return
      */
-    private List<Map<String,Object>> selectTableStructureByDbAndTb(String dbName, String tbName) {
-        JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+    private List<Map<String,Object>> selectTableStructureByDbAndTb(String dbName, String tbName, DbUtil dbUtil) {
+        //JDBCUtil jdbcUtil =new JDBCUtil(dbName);
+       // DbUtil dbUtil =new DbUtil(connection);
         String sql ="select t.COLUMN_NAME,  t.DATA_TYPE, t.DATA_LENGTH,\n" +
                 "        t.DATA_PRECISION, t.NULLABLE, t.COLUMN_ID, c.COMMENTS,\n" +
                 "                (\n" +
@@ -380,7 +438,8 @@ public class TbService {
                 "        where t.table_name = c.table_name  and t.column_name = c.column_name\n" +
                 "\n" +
                 "        and t.table_name =  '"+tbName+"'";
-        return  jdbcUtil.excuteQuery(sql,new Object[][]{});
+        //return  jdbcUtil.excuteQuery(sql,new Object[][]{});
+        return dbUtil.excuteQuery(sql,new Object[][]{});
     }
 
     /**

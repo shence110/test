@@ -32,10 +32,23 @@ public class DateUtil {
         return new SimpleDateFormat(pattern).format(date);
     }
 
+    /**
+     * @param 返回java.sql.Date格式的
+     * */
+    public static java.sql.Date strToDate(String strDate) {
+        String str = strDate;
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        java.util.Date d = null;
+        try {
+            d = format.parse(str);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        java.sql.Date date = new java.sql.Date(d.getTime());
+        return date;
+    }
+
     public static void main(String[] args) {
-//        List<String> names = Lists.newArrayList("John,a,a");
-//
-        String a =  " pvar_BIM_RANK=='0' or pvar_BIM_RANK=='1' or pvar_BIM_RANK=='2' ".replaceAll("'","\"") ;
-        System.out.println(a);
+
         }
 }

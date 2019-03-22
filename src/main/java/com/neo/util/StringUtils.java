@@ -8,10 +8,13 @@ import com.google.gson.JsonParser;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -78,5 +81,11 @@ public class StringUtils {
         return googleJson.fromJson(jsonArr, ArrayList.class);
     }
 
+public static void main(String[] agrs){
+    String str ="2019-01-01 11:00:00.0";
+    int i = str.indexOf(".");//首先获取字符的位置
+    String newStr = str.substring(0,i);//再对字符串进行截取，获得想要得到的字符串
+    System.out.println(newStr);
 
+}
 }
