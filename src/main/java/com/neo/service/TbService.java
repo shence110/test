@@ -58,7 +58,7 @@ public class TbService {
     @Value("${uniqueConstraint}")
     public String uniqueConstraint;
 
-    @Value("${openMulitiThreads}")
+    @Value("${threadNum}")
     public String threadNum;
 
     /**
@@ -137,6 +137,7 @@ public class TbService {
         //查询某个库下的某个表的所有数据
         List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap,salverDbUtil);
         if (data.size()==0) return 0;
+        if (data.size()<groupSize) threads =1; //如果同步的数据太少 小于切割的数据条数 则只用一个线程
         Map<String,Object> m =(Map<String,Object>)data.get(0);
 
 
