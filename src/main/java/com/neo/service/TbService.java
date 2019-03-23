@@ -59,7 +59,7 @@ public class TbService {
     public String uniqueConstraint;
 
     @Value("${openMulitiThreads}")
-    public String openMulitiThreads;
+    public String threadNum;
 
     /**
      *
@@ -113,7 +113,7 @@ public class TbService {
 
         int insertCount =0;
         int count =0;
-        int threadFlag = Integer.valueOf(openMulitiThreads) ;//是否开启多线程
+        int threads = Integer.valueOf(threadNum) ;//多线程数量
         List<Map<String,Object>> tableStructure = null;
         Map<String,Object> param =new HashMap<>();
         //查询被导入数据库的表结构
@@ -147,20 +147,21 @@ public class TbService {
         long queryEnd =System.currentTimeMillis();
         logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
-        List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, groupSize);
+        int cutSize = data.size() /threads ;//每个线程处理的数据量
+        List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, cutSize);
 
 
         int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil);
 
-        if (threadFlag ==0 ){ //不开启多线程
+        if (threads == 1 ){ //不开启多线程
             for (List<Map<String, Object>> dat : newData) {
                 insertCount += masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
             }
         }else{
             final BlockingQueue<Future<Integer>> queue = new LinkedBlockingQueue<>();
-            final CountDownLatch  endLock = new CountDownLatch(newData.size()); //结束门
+            final CountDownLatch  endLock = new CountDownLatch(threads); //结束门
             List<Future<Integer>> results = new ArrayList<Future<Integer>>();
-            final ExecutorService exec = Executors.newFixedThreadPool(newData.size());
+            final ExecutorService exec = Executors.newFixedThreadPool(threads);
             for (List<Map<String, Object>> dat : newData ) {
                 Future<Integer> future= //(Future<Integer>) threadPoolUtils
                         exec.submit(new Callable<Integer>(){

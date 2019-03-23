@@ -5,6 +5,7 @@ package com.test;
  * @Date: 2019/3/22/022 14:59
  * @Description:
  */
+import com.neo.util.CollectionUtil;
 import com.neo.util.DateUtil;
 import oracle.jdbc.proxy.annotation.Pre;
 
@@ -130,10 +131,23 @@ public class InsertTest {
     }
 
     public static void main(String[] args) throws Exception {
-        InsertTest ti=new InsertTest();
-        List<Map<String, Object>> list =  ti.query(ti);
-        ti.multiThreadImport(5,list);
 
+        List<Map<String,Object>> data =new  ArrayList<>();
+        Map<String,Object> map ;
+        for (int i = 0; i <100 ; i++) {
+
+            map =new HashMap<>();
+            data.add(map);
+        }
+ int k =100/3;
+        System.out.println(k);
+        List<List<Map<String,Object>>> data1= CollectionUtil.splitList(data, 34);
+        System.out.println(data1.size());
+
+      /*  InsertTest ti=new InsertTest();
+        List<Map<String, Object>> list =  ti.query(ti);
+       //ti.multiThreadImport(5,list);
+        ti.Import(list);*/
 //        Map<String, Object> map = list .get(0);
 //        for (String key :map.keySet()) {
 //            if (null != map.get(key) )
@@ -142,6 +156,60 @@ public class InsertTest {
 //        System.out.println(list.size());
 
         //
+    }
+
+    private void Import( List<Map<String,Object>> list) throws SQLException {
+        long starttime=System.currentTimeMillis();
+
+                    Connection con=getMasterConnect();
+
+                        con.setAutoCommit(false);
+                        String sql = getInsertSql(list);
+                        PreparedStatement pst=con.prepareStatement(sql);
+                        Map<String, Object> map =null;
+                        Object value = null;
+                        int k ;//计数器
+                        String cloumnName = null;
+                        String dataType = null;
+                        java.sql.Date dateValue =null;
+                        for(int i=1;i<=list.size();i++){
+                            map=list.get(i);
+                            /***
+                             * 设置参数值 *****************start*************************************************
+                             */
+                            k=1;
+                            for (String key : map.keySet()) {
+                                value = map.get(key);
+                                if ( null == value ) {
+                                    pst.setObject(k,null);
+                                    k++;
+                                    continue;
+                                }
+
+                                if (value.getClass()== java.sql.Timestamp.class) {
+                                    pst.setDate(k,DateUtil.strToDate(   (value+"").substring(0,(value+"").indexOf("."))  ));
+                                    k++;
+                                    continue;
+                                }
+                                pst.setObject(k,value);
+                                k++;
+                            }
+                            /***
+                             * ******************************************end*********************************************
+                             */
+                            pst.addBatch();
+                            if(i%500 == 0){
+                                pst.executeBatch();
+                                con.commit();
+                            }
+                        }
+
+
+
+
+            long spendtime=System.currentTimeMillis()-starttime;
+            System.out.println( "******花费时间:"+spendtime);
+
     }
 
     private List<Map<String,Object>> query(InsertTest ti) throws SQLException {
@@ -173,8 +241,8 @@ public class InsertTest {
     private ResultSet executeQueryRS(String sql,Connection connection) throws SQLException {
        PreparedStatement pst = connection.prepareStatement(sql);
         ResultSet resultSet=      pst  .executeQuery();
-        connection.close();
-        pst.close();
+       // connection.close();
+        //pst.close();
         return resultSet;
     }
 }
