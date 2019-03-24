@@ -175,9 +175,8 @@ public class DbUtil {
             pst = conn.prepareStatement(sql.toString());
             result =  insertBatch(tbName , newData, pst,tbstruct);
             long end = System.currentTimeMillis();
-            logger.info("批量插入需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
-            logger.info("批量插入了:"+result.length+"条数据"); //批量插入需要时间:
-            return result.length ;
+            logger.info("批量插入了:"+newData.size()+"条数据 需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
+            return newData.size() ;
         } catch (Exception e) {
            logger.error(sql.toString(),e);
            e.printStackTrace();
