@@ -2,10 +2,7 @@ package com.neo.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.neo.mapper.bimall.BimallMapper;
-import com.neo.mapper.eafbim.EafbimMapper;
-import com.neo.mapper.gwsbim.GwsbimMapper;
-import com.neo.mapper.wcjbim.WcjbimMapper;
+
 import com.neo.util.CollectionUtil;
 import com.neo.util.DbUtil;
 import org.apache.log4j.Logger;
@@ -34,17 +31,7 @@ public class TbService {
      * 日志对象
      */
     private Logger logger = Logger.getLogger(TbService.class);
-    @Autowired
-    private EafbimMapper eafbimMapper;
-
-    @Autowired
-    private BimallMapper bimallMapper;
-
-    @Autowired
-    private GwsbimMapper gwsbimMapper;
-
-    @Autowired
-    private WcjbimMapper wcjbimMapper;
+   
 
     @Value("${spring.master.datasource}")
     public String masterDataSource;

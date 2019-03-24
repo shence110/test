@@ -36,8 +36,6 @@ public  class CollectionUtil {
 
     }
 
-    public static void main(String[] args) {
 
-    }
 
 }
