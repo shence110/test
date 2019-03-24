@@ -130,7 +130,7 @@ public class InsertTest {
 
     }
 
-    public static void main(String[] args) throws Exception {
+/*    public static void main(String[] args) throws Exception {
 
         List<Map<String,Object>> data =new  ArrayList<>();
         Map<String,Object> map ;
@@ -144,10 +144,10 @@ public class InsertTest {
         List<List<Map<String,Object>>> data1= CollectionUtil.splitList(data, 34);
         System.out.println(data1.size());
 
-      /*  InsertTest ti=new InsertTest();
+      *//*  InsertTest ti=new InsertTest();
         List<Map<String, Object>> list =  ti.query(ti);
        //ti.multiThreadImport(5,list);
-        ti.Import(list);*/
+        ti.Import(list);*//*
 //        Map<String, Object> map = list .get(0);
 //        for (String key :map.keySet()) {
 //            if (null != map.get(key) )
@@ -156,7 +156,7 @@ public class InsertTest {
 //        System.out.println(list.size());
 
         //
-    }
+    }*/
 
     private void Import( List<Map<String,Object>> list) throws SQLException {
         long starttime=System.currentTimeMillis();

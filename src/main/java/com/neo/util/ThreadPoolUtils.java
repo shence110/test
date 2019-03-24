@@ -146,7 +146,7 @@ public class ThreadPoolUtils
         }
     }
 
-    public static void main(String[] args)
+    /*public static void main(String[] args)
     {
         final Random random = new Random();
         AtomicInteger c = new AtomicInteger();
@@ -184,7 +184,7 @@ public class ThreadPoolUtils
         System.out.println("task num:" + ThreadPoolUtils.getInstance().getTaskNum());
         System.out.println("end");
         ThreadPoolUtils.getInstance().shutdown(false);
-    }
+    }*/
 
 
 
