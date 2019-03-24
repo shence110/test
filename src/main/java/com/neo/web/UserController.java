@@ -53,7 +53,7 @@ public class UserController  {
 
     @RequestMapping("/")
     public String index() {
-      return "/queryAllTable";
+      return "queryAllTable";
 
     }
 
