@@ -17,12 +17,7 @@ textField:'text',onChange:uie_dgd_search" id="db">
 </select>
 <button  id="me" onclick="merge()" type="button" >合并</button>
 
-<table id="dg"  class="easyui-datagrid" title="Client Side Pagination" style="width:700px;height:300px" data-options="
-				rownumbers:true,
-
-				autoRowHeight:false,
-				pagination:true,
-				pageSize:10">
+<table id="dg"  >
 
     <tr>
         <th field="tbName" width="80" data-options="sortable:true">表名</th>
@@ -163,7 +158,6 @@ var dbs ;
             pagePosition:'bottom',
             rownumbers : true,
             singleSelect  :false,
-            toolbar : '#weektb',
             remoteSort:true,
             border : false,
 
