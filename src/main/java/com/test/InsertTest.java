@@ -7,7 +7,7 @@ package com.test;
  */
 import com.neo.util.CollectionUtil;
 import com.neo.util.DateUtil;
-import oracle.jdbc.proxy.annotation.Pre;
+
 
 import java.sql.*;
 import java.util.*;

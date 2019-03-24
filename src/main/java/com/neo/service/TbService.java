@@ -65,7 +65,8 @@ public class TbService {
         param.put("sort",sort);
         param.put("order",order);
 
-
+        int  end= Integer.valueOf(page)*Integer.valueOf(rows)+1;
+        int start = ( Integer.valueOf(page) -1 ) * Integer.valueOf(rows);
         DbUtil db = new DbUtil(connection);
         String sql =" select t.table_name, count_rows(t.table_name)  num_rows,\n" +
                 "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n" ;
@@ -73,7 +74,8 @@ public class TbService {
                     sql+= "  ORDER BY "+sort+" "+order;
                 }
 
-        tbCollection = db.excuteQuery(sql,new Object[][]{});
+         String newSql =" select * from ( select a.*,rownum rn from (" +sql +" )a where rownum < "+end+") where rn> "+start;
+        tbCollection = db.excuteQuery(newSql,new Object[][]{});
         map.put("rows",tbCollection);
         map.put("total",tbCollection.size());
         return map;

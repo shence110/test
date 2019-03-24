@@ -9,7 +9,7 @@
     <script type="text/javascript" src="../jquery-easyui-1.7.0/jquery.easyui.min.js"></script>
 
 </head>
-<body>
+<body class="easyui-layout" border="false">
 
 <select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="valueField:'id',
 textField:'text',onChange:uie_dgd_search" id="db">
@@ -17,19 +17,13 @@ textField:'text',onChange:uie_dgd_search" id="db">
 </select>
 <button  id="me" onclick="merge()" type="button" >合并</button>
 
-<table id="dg"  >
-
-    <tr>
-        <th field="tbName" width="80" data-options="sortable:true">表名</th>
-        <th field="row" width="100" data-options="sortable:true">行数</th>
-        <th field="column" width="80" data-options="sortable:true">列数</th>
-
-    </tr>
-
-</table>
+<table id="dg"  ></table>
 
 
 <script>
+
+
+
     $(function(){
         //查询所有数据源
         getAllDb();
@@ -171,6 +165,28 @@ var dbs ;
             onSelect: function (rowIndex, rowData) {//
             }
         });
+
+
+        var p = $('#dg').datagrid('getPager');
+        $(p).pagination({
+            showRefresh: false,
+            total: data.length,
+            pageSize: 5,//每页显示的记录条数，默认为10
+            pageList: [5,10,15],//可以设置每页记录条数的列表
+            beforePageText: '第',//页数文本框前显示的汉字
+            afterPageText: '页    共 {pages} 页',
+            displayMsg: '当前显示 {from} - {to} 条记录   共 {total} 条记录',
+            onSelectPage:function (pageNo, pageSize) {
+                var start = (pageNo - 1) * pageSize;
+                var end = start + pageSize;
+                $("#tt").datagrid("loadData", data.slice(start, end));
+                $(p).pagination('refresh', {
+                    total:data.length,
+                    pageNumber:pageNo
+                });
+            }
+        });
+
     }
 
 
