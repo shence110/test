@@ -138,9 +138,10 @@ public class TbService {
         logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
         int cutSize = data.size() /threads ;//每个线程处理的数据量
+
         List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, cutSize);
 
-
+        //批量删除重复的数据
         int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil);
 
         if (threads == 1 ){ //不开启多线程
@@ -180,12 +181,27 @@ public class TbService {
         return insertCount;
     }
 
+    /**
+     * 批量删除重复的数据
+     * @param paramsMap
+     * @param tbName
+     * @param data
+     * @param masterDbUtil
+     * @return
+     * @throws Exception
+     */
     private int batchDelete(Map<String, Object> paramsMap, String tbName, List<Map<String, Object>> data, DbUtil masterDbUtil) throws Exception {
         List<Map<String, Object>> uniqueList = getUniqueConstriant(paramsMap, masterDbUtil);
         return masterDbUtil.batchDelete(data, uniqueList, tbName);
 
     }
 
+    /**
+     * 获得参数值
+     * @param tbName
+     * @param dat
+     * @return
+     */
     private Object[][] getParams(String tbName, List<Map<String, Object>> dat) {
         Map<String,Object> m =(Map<String,Object>)dat.get(0);
         Object[][] params =new Object[dat.size()][m.size()];
@@ -272,7 +288,7 @@ public class TbService {
     }
 
     /**
-     *
+     * 判断表是否存在
      * @param tbName
      * @return
      */

@@ -269,6 +269,14 @@ public class DbUtil {
         return null;
     }
 
+    /**
+     * 批量删除
+     * @param data
+     * @param uniqueList
+     * @param tbName
+     * @return
+     * @throws Exception
+     */
     public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws Exception {
         String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
 
@@ -296,7 +304,7 @@ public class DbUtil {
                 k++;
             }
             pst = conn.prepareStatement(sql);
-            //批量插入
+            //批量处理
             for (Map<String, Object> map : data) {
                 for (int i = 0; i < arr.length; i++) {
                     pst.setObject(i + 1, map.get(arr[i]) + "");
