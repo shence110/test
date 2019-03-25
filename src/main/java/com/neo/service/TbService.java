@@ -113,7 +113,7 @@ public class TbService {
         //查询被导入数据库的表结构
         List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName,salverDbUtil);
         //该主库是否存在此表
-        count = checkTable(tbName,masterDbUtil);
+        count = checkTable(tbName,masterDbUtil,null);
 
 
         if (0 == count) {//若不存在则主数据源创建新表
@@ -133,12 +133,6 @@ public class TbService {
         if (data.size()==0) return 0;
         if (data.size()<groupSize) threads =1; //如果同步的数据太少 小于切割的数据条数 则只用一个线程
         Map<String,Object> m =(Map<String,Object>)data.get(0);
-
-
-
-
-
-
         long queryEnd =System.currentTimeMillis();
         logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
         //对数据进行切分
@@ -147,7 +141,7 @@ public class TbService {
         List<List<Map<String, Object>>> newData = CollectionUtil.splitList(data, cutSize);
 
         //批量删除重复的数据
-        int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil);
+        int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil,salverDbUtil);
 
         if (threads == 1 ){ //不开启多线程
             for (List<Map<String, Object>> dat : newData) {
@@ -195,8 +189,10 @@ public class TbService {
      * @return
      * @throws Exception
      */
-    private int batchDelete(Map<String, Object> paramsMap, String tbName, List<Map<String, Object>> data, DbUtil masterDbUtil) throws Exception {
-        List<Map<String, Object>> uniqueList = getUniqueConstriant(paramsMap, masterDbUtil);
+    private int batchDelete(Map<String, Object> paramsMap, String tbName, List<Map<String, Object>> data, DbUtil masterDbUtil,DbUtil salverDbUtil) throws Exception {
+        //获得列表中的唯一键
+        List<Map<String, Object>> uniqueList = getUniqueConstriant(paramsMap, masterDbUtil,salverDbUtil);
+        //批量删除重复数据
         return masterDbUtil.batchDelete(data, uniqueList, tbName);
 
     }
@@ -222,25 +218,7 @@ public class TbService {
         return  params;
     }
 
-    private String getInsertSql1(String tbName, List<Map<String, Object>> newData) {
 
-        StringBuilder sql = new StringBuilder();
-        Map<String,Object> m= (Map<String,Object>)newData.get(0);
-        sql.append("insert into "+tbName+" (");
-        for (Map.Entry<String, Object> mm:  m.entrySet()) {
-            sql .append(mm.getKey()+",") ;
-
-        }
-        sql.deleteCharAt(sql.length()-1);
-        sql .append(" ) values (");
-
-        for (int i=0;i<m.size();i++) {
-            sql .append(" ?,");
-        }
-        sql.deleteCharAt(sql.length()-1);
-        sql .append(" ) ");
-        return sql.toString();
-    }
 
 
     /**
@@ -249,7 +227,7 @@ public class TbService {
      * @param masterDbUtil
      * @return
      */
-    private List<Map<String, Object>> getUniqueConstriant(Map<String, Object> paramsMap, DbUtil masterDbUtil) {
+    private List<Map<String, Object>> getUniqueConstriant(Map<String, Object> paramsMap, DbUtil masterDbUtil,DbUtil salverDbUtil) throws Exception {
         List<Map<String, Object>> list = null;
 
         JSONArray constraint = JSONArray.parseArray(uniqueConstraint);
@@ -269,7 +247,7 @@ public class TbService {
         if (null!= list)return list;
         String sql ="select cu.*,au.* from user_cons_columns cu, user_constraints au where cu.constraint_name=au.constraint_name and\n" +
                 " cu.table_name='"+tbName+"'"+" and constraint_type = 'P' " ;
-        list = masterDbUtil.excuteQuery(sql, new Object[][]{});
+        list = salverDbUtil.excuteQuery(sql, new Object[][]{});
         if (list.size()==0){
             sql = "select t.*,i.index_type from user_ind_columns t,user_indexes i where t.index_name = i.index_name and\n" +
                     "\n" +
@@ -277,7 +255,15 @@ public class TbService {
                     "and i.index_name in (\n" +
                     "select index_name from user_indexes where uniqueness='UNIQUE' and table_name='"+tbName+"'\n" +
                     ")";
-            list = masterDbUtil.excuteQuery(sql, new Object[][]{});
+            list = salverDbUtil.excuteQuery(sql, new Object[][]{});
+        }
+        if (list.size()==0){//判断该表是否存在eaf_Id
+          int i =  checkTable(  tbName, salverDbUtil,"EAF_ID");
+          if (i==1) {
+              Map<String,Object> map =new HashMap<>();
+              map.put("COLUMN_NAME","EAF_ID");
+              list.add(map);
+          }
         }
         return list;
     }
@@ -297,8 +283,13 @@ public class TbService {
      * @param tbName
      * @return
      */
-    private int checkTable( String tbName,DbUtil dbUtil) throws Exception{
-        String sql =" SELECT COUNT(*) TABLE_NUMS FROM User_Tables WHERE table_name = '"+tbName+"' " ;
+    private int checkTable( String tbName,DbUtil dbUtil,String Column) throws Exception{
+        String sql = null ;
+        if(Column ==null )
+         sql =" SELECT COUNT(*) TABLE_NUMS FROM User_Tables WHERE table_name = '"+tbName+"' " ;
+        else sql="select count(0) as TABLE_NUMS  from user_tab_columns   \n" +
+                "where UPPER(column_name)='"+Column+"' AND TABLE_NAME = '"+tbName+"'";
+
         List<Map<String,Object>> list =dbUtil.excuteQuery(sql,new Object[][]{});
         String count =list.get(0).get("TABLE_NUMS")+"";
         if ("1".equals(count) ) return 1;
