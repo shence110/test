@@ -78,28 +78,7 @@
           <strong class="am-text-primary am-text-lg">帮助</strong> /
           <small>Help </small>
 
-          <div class="am-g">
-            <div class="am-u-sm-12">
-              <form class="am-form">
-                <table class="am-table am-table-striped am-table-hover table-main">
-                  <thead>
-                  <tr>
-                    <th class="table-check"></th>
-                    <th class="table-title"> 表名 </th>
-                    <th class="table-title">行数</th>
-                    <th class="table-title">列数</th>
-                  </tr>
-                  </thead>
-                  <tbody id="cloumn1">
 
-
-                  </tbody>
-                </table>
-
-              </form>
-            </div>
-
-          </div>
 
         </div>
 
@@ -196,6 +175,8 @@
             dataType:'json',
             data:{
                 "dbName":name,
+                page :1,
+                rows :10
             },
             success:function(data){
                 showTable(data.rows)

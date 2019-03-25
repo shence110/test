@@ -58,7 +58,7 @@ public class TbService {
      * @return
      */
     public Map<String,Object> getTableByDB(String dbName, String page,
-                                           String rows, String sort, String order, Connection connection){
+                                           String rows, String sort, String order, Connection connection) throws SQLException {
         List<Map<String,Object>>  tbCollection = null ;
         Map<String,Object> map =new HashMap<>();
         Map<String,Object> param =new HashMap<>();
@@ -70,14 +70,19 @@ public class TbService {
         DbUtil db = new DbUtil(connection);
         String sql =" select t.table_name, count_rows(t.table_name)  num_rows,\n" +
                 "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n" ;
+
+        String totalSql = "select count(*)  total from ("+sql +") t";
                 if(sort!=null && !"".equals(sort)){
                     sql+= "  ORDER BY "+sort+" "+order;
                 }
 
-         String newSql =" select * from ( select a.*,rownum rn from (" +sql +" )a where rownum < "+end+") where rn> "+start;
+        int total =  db.getCount(totalSql,new Object[][]{});
+        String newSql =" select * from ( select a.*,rownum rn from (" +sql +" )a where rownum < "+end+") where rn> "+start;
+
+
         tbCollection = db.excuteQuery(newSql,new Object[][]{});
         map.put("rows",tbCollection);
-        map.put("total",tbCollection.size());
+        map.put("total",total);
         return map;
     }
 

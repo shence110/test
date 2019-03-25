@@ -53,8 +53,9 @@ public class UserController  {
 
     @RequestMapping("/")
     public String index() {
-      return "queryAllTable";
-
+//     return "queryAllTable";
+//return  "admin-help";
+        return "user_list";
     }
 
     @RequestMapping("/getAllByDB")
@@ -82,7 +83,7 @@ public class UserController  {
         Map<String, Object> map = null;
         Connection conn = null ;
         try {
-            if (dbName.trim().equals("")) dbName =masterDataSource;
+            if (null== dbName || dbName.trim().equals("")) dbName =masterDataSource;
             conn = DataSourceHelper.GetConnection(dbName);
             map = tbService.getTableByDB(dbName, page, rows, sort, order,conn);
 

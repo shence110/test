@@ -51,6 +51,22 @@ public class DbUtil {
      * @return List
      *                       结果集
      */
+
+
+    public  int  getCount(String sql, Object[] params) throws SQLException {
+        // 执行SQL获得结果集
+        ResultSet rs = executeQueryRS(sql, params);
+
+        int rowCount = 0;
+        if(rs.next())
+        {
+            rowCount=rs.getInt(1);
+        }
+
+        return rowCount;
+    }
+
+
     public List<Map<String, Object>> excuteQuery(String sql, Object[] params) {
         // 执行SQL获得结果集
         ResultSet rs = executeQueryRS(sql, params);
