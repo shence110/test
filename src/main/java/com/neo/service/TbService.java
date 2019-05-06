@@ -349,18 +349,22 @@ public class TbService {
      */
     private void getCreateTableSql(String tbName, List<Map<String, Object>> tableStructure, Map<String, Object> param) throws IOException, SQLException {
         String primarySql ="";
+        String dataType = null; //数据类型
+        String columnName =null ;//列名
         List<String> primaryList =new ArrayList<>();
         String sql =" CREATE TABLE "+tbName+" (\n";
         int k=0;
         for (Map<String,Object> map :tableStructure ) {
+            dataType = map.get("DATA_TYPE")+"" ;
+            columnName  = map.get("COLUMN_NAME")+"" ;
             k++;
             if ("P".equals(map.get("IS_PRIMARY")+"")){
-                primaryList.add(map.get("COLUMN_NAME")+"");
+                primaryList.add(columnName);
             }
-            sql+= " "+map.get("COLUMN_NAME") +" "+map.get("DATA_TYPE") ;
+            sql+= " "+map.get("COLUMN_NAME") +" "+dataType ;
             if (null!= map.get("DATA_LENGTH") ){
-                if ("DATE".equals(map.get("DATA_TYPE"))||"CLOB".equals(map.get("DATA_TYPE"))
-                        ||"BLOB".equals(map.get("DATA_TYPE"))
+                if ("DATE".equals(dataType)||"CLOB".equals(dataType)
+                        ||"BLOB".equals(dataType)  ||"LONG RAW".equals(dataType)
                         ) sql+= " " ;
                 else sql+= " (" + map.get("DATA_LENGTH")+")";
             }
