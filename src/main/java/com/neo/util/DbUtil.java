@@ -314,8 +314,11 @@ public class DbUtil {
         if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
 
         if (uniqueList.size() == 1) {
+            boolean flag =null != ((uniqueList.get(0).get("IS_NEED_DEL")) );
             columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
-            isNeedDel =  (Boolean) uniqueList.get(0).get("IS_NEED_DEL") ;
+            if (flag ){
+                isNeedDel = (Boolean) uniqueList.get(0).get("IS_NEED_DEL") ;
+            }
             if (!isNeedDel) return 0;
             sql += " and " + columnName + " =  ? ";
             pst = conn.prepareStatement(sql);
