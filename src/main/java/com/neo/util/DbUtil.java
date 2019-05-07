@@ -221,6 +221,7 @@ public class DbUtil {
     }
 
     private int[] insertBatch(String tbName, List<Map<String, Object>> dat,PreparedStatement pst,List<Map<String, Object>> tbstruct) throws SQLException, IOException {
+        conn.setAutoCommit(false);
         Map<String,Object> m =(Map<String,Object>)dat.get(0);
         int[] ik =null;
         String value = null;
@@ -257,9 +258,19 @@ public class DbUtil {
                 else pst.setObject(j+1,value);
                 j++;
             }
+
             pst.addBatch();
-            ik = pst.executeBatch();
-            conn.commit();
+            if(i>0 && i%1000==0){
+                ik = pst.executeBatch();
+                //清除批处理命令
+                  pst.clearBatch();
+                //如果不想出错后，完全没保留数据，则可以每执行一次提交一次，但得保证数据不会重复
+
+                conn.commit();
+
+            }
+
+
         }
         return  ik;
     }
