@@ -78,14 +78,14 @@ public class UserController  {
 
     @RequestMapping("/getTableByDB")
     @ResponseBody
-    public String getTableByDB(String dbName, String page,
+    public String getTableByDB(String dbName,String tbName, String page,
                                  String rows, String sort, String order) throws SQLException {
         Map<String, Object> map = null;
         Connection conn = null ;
         try {
             if (null== dbName || dbName.trim().equals("")) dbName =masterDataSource;
             conn = DataSourceHelper.GetConnection(dbName);
-            map = tbService.getTableByDB(dbName, page, rows, sort, order,conn);
+            map = tbService.getTableByDB(dbName,tbName, page, rows, sort, order,conn);
 
         } catch (Exception e) {
             map.put("err", true);

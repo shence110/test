@@ -12,7 +12,12 @@
 <select class="easyui-combobox" panelHeight="auto" style="width:200px" data-options="valueField:'id',
 textField:'text',onChange:uie_dgd_search" id="db">
 </select>
-<button  id="me" onclick="merge()" type="button" >合并</button>
+
+<select class="easyui-textbox" panelHeight="auto" style="width:200px" id="tbb"  >
+</select>
+<a href="#" class="easyui-linkbutton" onclick="uie_dgd_search();">查询</a>
+<a href="#" class="easyui-linkbutton" onclick="merge();">合并</a>
+
 
 <table id="dataTable"  style="width:98%;height:98%">
 </table>
@@ -107,6 +112,7 @@ textField:'text',onChange:uie_dgd_search" id="db">
     function uie_dgd_search() {
 
         var dbName =$('#db').combobox("getValue");
+        var tbName = $('#tbb').textbox("getValue");
 
         var masterDb;
 
@@ -121,7 +127,8 @@ textField:'text',onChange:uie_dgd_search" id="db">
 
 
         $('#dataTable').datagrid('reload', {
-            'dbName': $('#db').combobox('getValue')
+            'dbName': dbName,
+            'tbName': tbName,
         });
         $('#dataTable').datagrid("clearSelections"); //清空选中项
     }

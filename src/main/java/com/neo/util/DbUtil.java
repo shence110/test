@@ -310,9 +310,13 @@ public class DbUtil {
         int[] result = null;//批量插入返回的数组
         String columnName = null;//列名
         PreparedStatement pst = null;
+        boolean isNeedDel = true;
         if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
+
         if (uniqueList.size() == 1) {
             columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
+            isNeedDel =  (Boolean) uniqueList.get(0).get("IS_NEED_DEL") ;
+            if (!isNeedDel) return 0;
             sql += " and " + columnName + " =  ? ";
             pst = conn.prepareStatement(sql);
             for (Map<String, Object> map : data) {

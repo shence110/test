@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.neo.util.CollectionUtil;
 import com.neo.util.DbUtil;
 import org.apache.log4j.Logger;
+import org.codehaus.groovy.tools.StringHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class TbService {
      * @param order
      * @return
      */
-    public Map<String,Object> getTableByDB(String dbName, String page,
+    public Map<String,Object> getTableByDB(String dbName,String tbName, String page,
                                            String rows, String sort, String order, Connection connection) throws SQLException {
         List<Map<String,Object>>  tbCollection = null ;
         Map<String,Object> map =new HashMap<>();
@@ -69,7 +70,9 @@ public class TbService {
         int start = ( Integer.valueOf(page) -1 ) * Integer.valueOf(rows);
         DbUtil db = new DbUtil(connection);
         String sql =" select t.table_name, count_rows(t.table_name)  num_rows,\n" +
-                "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n" ;
+                "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n where 1=1 " ;
+
+        if (null!=tbName && !"".equals(tbName.trim()) ) sql+=" and t.TABLE_NAME = '"+tbName+"'";
 
         String totalSql = "select count(*)  total from ("+sql +") t";
                 if(sort!=null && !"".equals(sort)){
@@ -240,6 +243,7 @@ public class TbService {
                 list = new ArrayList<>();
                 Map<String,Object> map =new HashMap<>();
                 map.put("COLUMN_NAME",jsonObject.get("column")+"");
+                map.put("IS_NEED_DEL",jsonObject.get("isNeedDel"));
                 list.add(map);
                 break;
             }
