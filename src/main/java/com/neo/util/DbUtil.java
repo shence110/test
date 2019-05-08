@@ -6,10 +6,8 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.Date;
+import java.util.*;
 
 /**
  * @Auther: Administrator
@@ -91,7 +89,7 @@ public class DbUtil {
         try {
             // 将ResultSet的结果保存到List中
             while (rs.next()) {
-                Map<String, Object> map = new HashMap<String, Object>();
+                Map<String, Object> map = new LinkedHashMap<String, Object>();
                 for (int i = 1; i <= columnCount; i++) {
                     map.put(rsmd.getColumnLabel(i), rs.getObject(i));
                 }
@@ -190,10 +188,13 @@ public class DbUtil {
             sql =  getInsertSql( tbName,  newData);
             conn.setAutoCommit(false);
             pst = conn.prepareStatement(sql);
-            result =  insertBatch(tbName , newData, pst,tbstruct);
+            //result =  insertBatch(tbName , newData, pst,tbstruct);
+            result =  insertBatch1(tbName , newData, pst,tbstruct);
             long end = System.currentTimeMillis();
             logger.info("批量插入了:"+newData.size()+"条数据 需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
-            return newData.size() ;
+            int len= newData.size() ;
+            newData =null;
+            return len;
         } catch (Exception e) {
            logger.error(sql.toString(),e);
            e.printStackTrace();
@@ -278,6 +279,84 @@ public class DbUtil {
         conn.commit();
         return  ik;
     }
+
+    private int[] insertBatch1(String tbName, List<Map<String, Object>> dat,PreparedStatement pst,List<Map<String, Object>> tbstruct) throws SQLException, IOException {
+        conn.setAutoCommit(false);
+        Map<String,Object> m =(Map<String,Object>)dat.get(0);
+        int[] ik =null;
+        String value = null;
+        Map<String,Object> ma = null;
+        String cloumnName = null;
+        String dataType = null;
+        java.sql.Date dateValue =null;
+        boolean flag ;
+        List<String> dataTypeList =new ArrayList<>();
+        //表结构字段顺序和数据列表字段顺序相同
+        tbstruct.forEach(e-> dataTypeList.add(e.get("DATA_TYPE")+""));
+
+       // String[] arr = new  String[tbstruct.size()];
+
+        for (int i = 0; i <dat.size() ; i++) {
+            ma = (Map<String,Object>)dat.get(i);
+            int j=0;
+            for (String k:ma.keySet()) {
+                value =ma.get(k)+"";
+
+                if ("null".equals(value.trim())) value =null;
+                flag =false;
+                dataType = dataTypeList.get(j);
+                if ( ("DATE".equals(dataType)  && value !=null )){
+                    value =   value.substring(0,value.indexOf("."));
+                    dateValue = DateUtil.strToDate(value);
+                    flag =true;
+                }
+                if (  ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
+                    value =getValueByType(ma,k,dataType);
+
+                }
+                /*
+                for (Map<String, Object> structure:tbstruct) {
+                    cloumnName =structure.get("COLUMN_NAME")+"";
+                    dataType =structure.get("DATA_TYPE")+"";
+                    if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
+                        value =   value.substring(0,value.indexOf("."));
+                        dateValue = DateUtil.strToDate(value);
+                        flag =true;
+                        break;
+                    }
+                    if ( k.equals(cloumnName) && ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
+                        value =getValueByType(ma,k,dataType);
+                        break;
+                    }
+
+                }
+                */
+
+                if (flag)pst.setObject(j+1,dateValue);
+                else pst.setObject(j+1,value);
+                j++;
+            }
+
+            pst.addBatch();
+
+            if(i>0 && i%1000==0){
+                ik = pst.executeBatch();
+                //清除批处理命令
+                pst.clearBatch();
+                //如果不想出错后，完全没保留数据，则可以每执行一次提交一次，但得保证数据不会重复
+
+                conn.commit();
+
+            }
+
+
+        }
+        ik = pst.executeBatch();
+        pst.clearBatch();
+        conn.commit();
+        return  ik;
+    }
+
 
     /**
      * 根据数据类型获得值
