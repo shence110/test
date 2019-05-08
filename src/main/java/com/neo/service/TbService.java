@@ -252,6 +252,7 @@ public class TbService {
         String sql ="select cu.*,au.* from user_cons_columns cu, user_constraints au where cu.constraint_name=au.constraint_name and\n" +
                 " cu.table_name='"+tbName+"'"+" and constraint_type = 'P' " ;
         list = salverDbUtil.excuteQuery(sql, new Object[][]{});
+
         if (list.size()==0){
             sql = "select t.*,i.index_type from user_ind_columns t,user_indexes i where t.index_name = i.index_name and\n" +
                     "\n" +
@@ -268,6 +269,10 @@ public class TbService {
               map.put("COLUMN_NAME","EAF_ID");
               list.add(map);
           }
+        }
+
+        for (Map<String,Object> map:list) {
+            map.put("IS_NEED_DEL",true);
         }
         return list;
     }

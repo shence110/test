@@ -260,6 +260,7 @@ public class DbUtil {
             }
 
             pst.addBatch();
+
             if(i>0 && i%1000==0){
                 ik = pst.executeBatch();
                 //清除批处理命令
@@ -272,6 +273,8 @@ public class DbUtil {
 
 
         }
+        ik = pst.executeBatch();
+        conn.commit();
         return  ik;
     }
 
