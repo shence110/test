@@ -189,7 +189,7 @@ public class DbUtil {
         try {
             sql =  getInsertSql( tbName,  newData);
             conn.setAutoCommit(false);
-            pst = conn.prepareStatement(sql.toString());
+            pst = conn.prepareStatement(sql);
             result =  insertBatch(tbName , newData, pst,tbstruct);
             long end = System.currentTimeMillis();
             logger.info("批量插入了:"+newData.size()+"条数据 需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
@@ -204,7 +204,7 @@ public class DbUtil {
 
     private String getInsertSql(String tbName, List<Map<String, Object>> newData) {
         StringBuilder sql = new StringBuilder();
-        Map<String,Object> m= (Map<String,Object>)newData.get(0);
+        Map<String,Object> m= newData.get(0);
         sql.append("insert into "+tbName+" (");
         for (Map.Entry<String, Object> mm:  m.entrySet()) {
             sql .append(mm.getKey()+",") ;
@@ -274,6 +274,7 @@ public class DbUtil {
 
         }
         ik = pst.executeBatch();
+        pst.clearBatch();
         conn.commit();
         return  ik;
     }
