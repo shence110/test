@@ -119,7 +119,9 @@ public class UserController  {
                 tbName = map.get("TABLE_NAME") + "";
                 Map<String, String> resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
-                resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+               // resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+                 resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+
                 result.add(resultMap);
             }
             resu.put("list",result);

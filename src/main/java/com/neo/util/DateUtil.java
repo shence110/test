@@ -14,6 +14,10 @@ import java.util.Map;
  * @Description:
  */
 public class DateUtil {
+
+    public static void main(String[] args) {
+        System.out.println( 1005%1000 == 0 ? (1005/1000) : (1005/1000)+1);
+    }
     public static String splitDate(String orcDate ){
 
         return  orcDate.substring(0,orcDate.indexOf("."));

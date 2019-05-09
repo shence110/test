@@ -90,6 +90,89 @@ public class TbService {
     }
 
 
+    private Callable<List<Map<String, Object>>> read2List(final int i, final int nums, final DbUtil salverDbUtil,final String dbName,final String tbName) {
+        Callable<List<Map<String, Object>>> callable = new Callable<List<Map<String, Object>>>() {
+            public List<Map<String, Object>> call() throws Exception {
+                int startIndex = i * nums;
+                int maxIndex = startIndex + nums;
+
+                List<Map<String, Object>> list = selectAllByDbAndTb(dbName, tbName, salverDbUtil,startIndex,maxIndex);
+                return list;
+            }
+        };
+        return callable;
+
+    }
+
+
+
+
+    public Integer mergeData1(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize,
+                              Connection masterConn,Connection slaverConn
+    ) throws Exception {
+        DbUtil masterDbUtil =new DbUtil(masterConn);
+        DbUtil salverDbUtil =new DbUtil(slaverConn);
+        String  sql =" select count(1) from "+tbName ;
+       int count = salverDbUtil.getCount(sql,new Object[][]{});
+
+      //  int count = 24116;
+        int thrednum =  count%groupSize==0? count/groupSize: count/groupSize+1;//线程数
+        int start =0;
+        int end =0;
+        long queryStart =System.currentTimeMillis();
+
+        List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
+        ExecutorService service = Executors.newFixedThreadPool(thrednum);
+        BlockingQueue<Future<List<Map<String, Object>>>> queue = new LinkedBlockingQueue<Future<List<Map<String, Object>>>>();
+
+        for (int i = 0; i < thrednum; i++) {
+            Future<List<Map<String, Object>>> future = service.submit(read2List(i, groupSize, salverDbUtil,dbName,tbName));
+            queue.add(future);
+        }
+        int queueSize = queue.size();
+        for (int i = 0; i < queueSize; i++) {
+            List<Map<String, Object>> list1= queue.take().get();
+            data.addAll(list1);
+        }
+        service.shutdown();
+
+
+
+/*        final BlockingQueue<Future<Integer>> queue = new LinkedBlockingQueue<>();
+        final CountDownLatch  endLock = new CountDownLatch(threads); //结束门
+        List<Future<Integer>> results = new ArrayList<Future<Integer>>();
+        final ExecutorService exec = Executors.newFixedThreadPool(threads);
+        for ( int i=0; i<threads ;i++ ) {
+            Future<Integer> future= //(Future<Integer>) threadPoolUtils
+                    exec.submit(new Callable<Integer>(){
+                        @Override
+                        public Integer call() {
+                            try {
+
+                                return selectAllByDbAndTbWithPage(dbName, tbName, salverDbUtil,i).size();
+                                //masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+                            }catch(Exception e) {
+                               // logger.error("数据同步 exception!",e);
+                                return 0;
+                            }finally {
+                                endLock.countDown(); //线程执行完毕，结束门计数器减1
+                            }
+
+                        }
+                    });
+            queue.add(future);
+        }
+        endLock.await(); //主线程阻塞，直到所有线程执行完成
+        for(Future<Integer> future : queue)  insertCount +=future.get();
+        exec.shutdown(); //关闭线程池*/
+
+       // List<Map<String, Object>> data1 = selectAllByDbAndTb(dbName, tbName, salverDbUtil);
+        long queryEnd =System.currentTimeMillis();
+        logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
+        return 0;
+    }
+
+
     /**
      * 合并数据
      * @param dbName
@@ -132,7 +215,7 @@ public class TbService {
 
         long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
-        List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName, paramsMap,salverDbUtil);
+        List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName,salverDbUtil,null,null);
         if (data.size()==0) return 0;
         if (data.size()<groupSize) threads =1; //如果同步的数据太少 小于切割的数据条数 则只用一个线程
         Map<String,Object> m =(Map<String,Object>)data.get(0);
@@ -273,7 +356,7 @@ public class TbService {
             }
         }
         if (null!= list)return list;
-        String sql ="select cu.*,au.* from user_cons_columns cu, user_constraints au where cu.constraint_name=au.constraint_name and\n" +
+   /*     String sql ="select cu.*,au.* from user_cons_columns cu, user_constraints au where cu.constraint_name=au.constraint_name and\n" +
                 " cu.table_name='"+tbName+"'"+" and constraint_type = 'P' " ;
         list = salverDbUtil.excuteQuery(sql, new Object[][]{});
 
@@ -285,10 +368,11 @@ public class TbService {
                     "select index_name from user_indexes where uniqueness='UNIQUE' and table_name='"+tbName+"'\n" +
                     ")";
             list = salverDbUtil.excuteQuery(sql, new Object[][]{});
-        }
-        if (list.size()==0){//判断该表是否存在eaf_Id
+        }*/
+        if (null == list){//判断该表是否存在eaf_Id
           int i =  checkTable(  tbName, salverDbUtil,"EAF_ID");
           if (i==1) {
+              list =new ArrayList<>();
               Map<String,Object> map =new HashMap<>();
               List<String> columns = new ArrayList<>();
               columns.add("EAF_ID");
@@ -338,8 +422,14 @@ public class TbService {
      * @param paramsMap
      * @return
      */
-    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,Map<String,Object> paramsMap,  DbUtil dbUtil) {
-        String sql =" select * from "+tbName;
+    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,  DbUtil dbUtil,Integer startIndex,Integer maxIndex) {
+        String sql =" select * from "+tbName+" where 1=1 ";
+        if (null !=startIndex){
+            sql+=" and rownum >"+startIndex;
+        }
+        if (null !=maxIndex){
+            sql+=" and rownum <"+maxIndex;
+        }
         return dbUtil.excuteQuery(sql,new Object[][]{});
     }
 
