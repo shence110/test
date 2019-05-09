@@ -259,6 +259,7 @@ public class TbService {
 
         JSONObject jsonObject =null;
         String tbName = paramsMap.get("tbName")+"";
+
         for (int i = 0; i <constraint.size() ; i++) {
             jsonObject = (JSONObject) constraint.get(i);
             if (tbName.equals(jsonObject.get("table")+"")){
@@ -288,7 +289,9 @@ public class TbService {
           int i =  checkTable(  tbName, salverDbUtil,"EAF_ID");
           if (i==1) {
               Map<String,Object> map =new HashMap<>();
-              map.put("COLUMN_NAME","EAF_ID");
+              List<String> columns = new ArrayList<>();
+              columns.add("EAF_ID");
+              map.put("COLUMN_NAME",columns);
               list.add(map);
           }
         }

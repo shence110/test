@@ -129,6 +129,7 @@ public class UserController  {
         }catch (Exception e){
             resu.put("err",true);
             resu.put("content",e.getMessage());
+            logger.error(e.getMessage());
         }finally {
             if (null!=masterConn){
                 masterConn.close();
