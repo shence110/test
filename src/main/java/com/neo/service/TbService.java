@@ -242,7 +242,7 @@ public class TbService {
             if (tbName.equals(jsonObject.get("table")+"")){
                 list = new ArrayList<>();
                 Map<String,Object> map =new HashMap<>();
-                map.put("COLUMN_NAME",jsonObject.get("column")+"");
+                map.put("COLUMN_NAME",(List<String>)jsonObject.get("column"));
                 map.put("IS_NEED_DEL",jsonObject.get("isNeedDel"));
                 list.add(map);
                 break;

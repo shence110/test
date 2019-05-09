@@ -391,27 +391,38 @@ public class DbUtil {
         String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
 
         int[] result = null;//批量插入返回的数组
-        String columnName = null;//列名
+      //  String columnName = null;//列名
         PreparedStatement pst = null;
         boolean isNeedDel = true;
         if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
-
+        List<String> columnNames ;
         if (uniqueList.size() == 1) {
             boolean flag =null != ((uniqueList.get(0).get("IS_NEED_DEL")) );
-            columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
+            //columnName = uniqueList.get(0).get("COLUMN_NAME") + "";
+            columnNames =  (List<String>)uniqueList.get(0).get("COLUMN_NAME");
             if (flag ){
                 isNeedDel = (Boolean) uniqueList.get(0).get("IS_NEED_DEL") ;
             }
             if (!isNeedDel) return 0;
-            sql += " and " + columnName + " =  ? ";
+            for (String columnName:  columnNames) {
+                sql += " and " + columnName + " =  ? ";
+            }
+
             pst = conn.prepareStatement(sql);
+            int m ;
             for (Map<String, Object> map : data) {
-                pst.setObject(1, map.get(columnName) + "");
+                m=0;
+                for (String columnName:  columnNames) {
+                    m++;
+                    pst.setObject(m, map.get(columnName) + "");
+                }
+
                 pst.addBatch();
             }
             result = pst.executeBatch();
         } else if ((uniqueList.size() > 1)) {
             //sql 预编译
+            String columnName = null;//列名
             int k = 0;
             String[] arr = new String[uniqueList.size()];
             for (Map<String, Object> uniqueMap : uniqueList) {
