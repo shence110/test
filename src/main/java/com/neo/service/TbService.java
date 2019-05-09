@@ -72,7 +72,7 @@ public class TbService {
         String sql =" select t.table_name, count_rows(t.table_name)  num_rows,\n" +
                 "            ( select count(*) from user_tab_columns where table_name= t.table_name ) num_columns from user_tables t\n where 1=1 " ;
 
-        if (null!=tbName && !"".equals(tbName.trim()) ) sql+=" and t.TABLE_NAME = '"+tbName+"'";
+        if (null!=tbName && !"".equals(tbName.trim()) ) sql+=" and t.TABLE_NAME like '%"+tbName+"%'";
 
         String totalSql = "select count(*)  total from ("+sql +") t";
                 if(sort!=null && !"".equals(sort)){
@@ -145,10 +145,13 @@ public class TbService {
 
         //批量删除重复的数据
         int delCount = batchDelete(paramsMap, tbName, data, masterDbUtil,salverDbUtil);
+        //判断该表是否使用批处理
+        boolean isUseBatch = checTableIsUseBatch(tbName);
 
         if (threads == 1 ){ //不开启多线程
             for (List<Map<String, Object>> dat : newData) {
-                insertCount += masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+                insertCount += masterDbUtil.insert(tbName,dat,tb,isUseBatch);
+                        //batchInsertJsonArry(tbName,dat,tb);
             }
         }else{
             final BlockingQueue<Future<Integer>> queue = new LinkedBlockingQueue<>();
@@ -181,6 +184,25 @@ public class TbService {
 
 
         return insertCount;
+    }
+
+    private boolean checTableIsUseBatch(String tbName) {
+        boolean isUseBatch =true ;
+        JSONArray constraint = JSONArray.parseArray(uniqueConstraint);
+
+        JSONObject jsonObject =null;
+
+        for (int i = 0; i <constraint.size() ; i++) {
+            jsonObject = (JSONObject) constraint.get(i);
+            if (tbName.equals(jsonObject.get("table"))){
+                if (null !=  jsonObject.get("isUseBatch") ){
+                    isUseBatch = (Boolean) jsonObject.get("isUseBatch");
+                    break;
+                }
+
+            }
+        }
+        return isUseBatch;
     }
 
     /**

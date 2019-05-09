@@ -179,6 +179,77 @@ public class DbUtil {
         return affectedLine;
     }
 
+    public int insert(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct,boolean isUseBatch){
+        if (isUseBatch) return batchInsertJsonArry(tbName,newData,tbstruct);
+        return odinaryInsert(tbName,newData,tbstruct);
+    }
+
+    private int odinaryInsert(String tbName, List<Map<String,Object>> dat, List<Map<String,Object>> tbstruct) {
+        long start = System.currentTimeMillis();
+        String  sql= sql =  getInsertSql( tbName,  dat);;
+        int[] result= null;
+        PreparedStatement pst ;
+        Map<String,Object> ma;
+        String value ;
+        boolean flag;
+        String cloumnName;
+        String dataType;
+        java.sql.Date dateValue = null;
+        int rows=0;
+        try {
+            conn.setAutoCommit(false);
+            pst = conn.prepareStatement(sql);
+            //result =  insertBatch(tbName , newData, pst,tbstruct);
+
+            for (int i = 0; i <dat.size() ; i++) {
+                ma = (Map<String,Object>)dat.get(i);
+                int j=0;
+                for (String k:ma.keySet()) {
+                    value =ma.get(k)+"";
+
+                    if ("null".equals(value.trim())) value =null;
+                    flag =false;
+                    for (Map<String, Object> structure:tbstruct) {
+                        cloumnName =structure.get("COLUMN_NAME")+"";
+                        dataType =structure.get("DATA_TYPE")+"";
+                        if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
+                            value =   value.substring(0,value.indexOf("."));
+                            dateValue = DateUtil.strToDate(value);
+                            flag =true;
+                            break;
+                        }
+                        if ( k.equals(cloumnName) && ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
+                            value =getValueByType(ma,k,dataType);
+                            break;
+                        }
+
+                    }
+
+                    if (flag)pst.setObject(j+1,dateValue);
+                    else pst.setObject(j+1,value);
+                    j++;
+                }
+                try {
+                    rows +=  pst.executeUpdate();
+                    conn.commit();
+                }catch (Exception e){
+                    logger.info("插入出错 原因为: "+e.getMessage()); //批量插入需要时间:
+                }
+
+            }
+
+
+            long end = System.currentTimeMillis();
+            logger.info("插入了:"+rows+"条数据需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
+            return rows;
+        } catch (Exception e) {
+            logger.error(sql.toString(),e);
+            e.printStackTrace();
+        }
+        return 0;
+
+    }
+
     public int batchInsertJsonArry(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct){
         long start = System.currentTimeMillis();
         String  sql= null;
@@ -188,8 +259,8 @@ public class DbUtil {
             sql =  getInsertSql( tbName,  newData);
             conn.setAutoCommit(false);
             pst = conn.prepareStatement(sql);
-            //result =  insertBatch(tbName , newData, pst,tbstruct);
-            result =  insertBatch1(tbName , newData, pst,tbstruct);
+            result =  insertBatch(tbName , newData, pst,tbstruct);
+            //result =  insertBatch1(tbName , newData, pst,tbstruct);
             long end = System.currentTimeMillis();
             logger.info("批量插入了:"+newData.size()+"条数据 需要时间:"+(end - start)/1000+"s"); //批量插入需要时间:
             int len= newData.size() ;
