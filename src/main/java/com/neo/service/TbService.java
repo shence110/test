@@ -165,7 +165,8 @@ public class TbService {
                     public Integer call() {
                         try {
 
-                            return masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
+                            return masterDbUtil. insert(tbName,dat,tb,isUseBatch);
+                                    //masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
                         }catch(Exception e) {
                             logger.error("数据同步 exception!",e);
                             return 0;

@@ -233,7 +233,7 @@ public class DbUtil {
                     rows +=  pst.executeUpdate();
                     conn.commit();
                 }catch (Exception e){
-                    logger.info("插入出错 原因为: "+e.getMessage()); //批量插入需要时间:
+                    logger.error("插入出错 原因为: "+e.getMessage()); //批量插入需要时间:
                 }
 
             }
