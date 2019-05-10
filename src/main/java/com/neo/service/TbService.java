@@ -49,6 +49,39 @@ public class TbService {
     @Value("${threadNum}")
     public String threadNum;
 
+
+    int getThreads(int dataCount){
+        if (dataCount>1000 && dataCount<=10000){
+            return dataCount%1000==0? dataCount/1000:dataCount/1000+1;
+        }
+        if (dataCount>10000 && dataCount<=100000){
+            return dataCount%2000==0? dataCount/2000:dataCount/2000+1;
+        }
+        if (dataCount>100000 && dataCount<=1000000){
+            return dataCount%5000==0? dataCount/5000:dataCount/5000+1;
+        }
+        if (dataCount>1000000 && dataCount<=10000000){
+            return dataCount%10000==0? dataCount/10000:dataCount/10000+1;
+        }
+        return 1;
+    }
+
+    int getGroupSize(int dataCount){
+        if (dataCount>1000 && dataCount<=10000){
+            return 1000;
+        }
+        if (dataCount>10000 && dataCount<=100000){
+            return 2000;
+        }
+        if (dataCount>100000 && dataCount<=1000000){
+            return 5000;
+        }
+        if (dataCount>1000000 && dataCount<=10000000){
+            return 10000;
+        }
+        return 1000;
+    }
+
     /**
      *
      * @param dbName
@@ -90,14 +123,28 @@ public class TbService {
     }
 
 
-    private Callable<List<Map<String, Object>>> read2List(final int i, final int nums, final DbUtil salverDbUtil,final String dbName,final String tbName) {
+    private Callable<List<Map<String, Object>>> read2List(final int i, final int nums, final DbUtil salverDbUtil,final String dbName,
+                                                          final String tbName,final DbUtil  masterDbUtil,CountDownLatch countDownLatch ) {
         Callable<List<Map<String, Object>>> callable = new Callable<List<Map<String, Object>>>() {
-            public List<Map<String, Object>> call() throws Exception {
+            public List<Map<String, Object>> call()  {
+                try{
                 int startIndex = i * nums;
                 int maxIndex = startIndex + nums;
 
                 List<Map<String, Object>> list = selectAllByDbAndTb(dbName, tbName, salverDbUtil,startIndex,maxIndex);
-                return list;
+                //查询被导入数据库的表结构
+                //List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName,salverDbUtil);
+                //判断该表是否使用批处理
+               // boolean isUseBatch = checTableIsUseBatch(tbName);
+               // masterDbUtil. insert(tbName,list,tb,isUseBatch);
+                return list;}
+                catch (Exception e){
+                    e.printStackTrace();
+                    return new ArrayList<>();
+                }finally {
+                    countDownLatch.countDown();
+
+                }
             }
         };
         return callable;
@@ -105,7 +152,35 @@ public class TbService {
     }
 
 
+    List<Map<String, Object>> getDataByMulitThreads(String dbName ,String tbName,String masterDataSource ,int groupSize,
+                          Connection masterConn,Connection slaverConn) throws SQLException, InterruptedException, ExecutionException {
+        String  sql =" select count(1) from "+tbName ;
+        DbUtil salverDbUtil =new DbUtil(slaverConn);
+        DbUtil masterDbUtil =new DbUtil(masterConn);
+        int count = salverDbUtil.getCount(sql,new Object[][]{});
+        int thrednum =  getThreads(count);
+        long queryStart =System.currentTimeMillis();
 
+        List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
+        ExecutorService service = Executors.newFixedThreadPool(thrednum);
+        BlockingQueue<Future<List<Map<String, Object>>>> queue = new LinkedBlockingQueue<Future<List<Map<String, Object>>>>();
+
+        groupSize = getGroupSize(count);
+        final CountDownLatch  endLock = new CountDownLatch(thrednum); //结束门
+        for (int i = 0; i < thrednum; i++) {
+            Future<List<Map<String, Object>>> future = service.submit(read2List(i, groupSize, salverDbUtil,dbName,tbName,masterDbUtil,endLock));
+            queue.add(future);
+        }
+        int queueSize = queue.size();
+        for (int i = 0; i < queueSize; i++) {
+            List<Map<String, Object>> list1= queue.take().get();
+            data.addAll(list1);
+        }
+        service.shutdown();
+        long queryEnd =System.currentTimeMillis();
+        logger.info("查询"+dbName+"库 中表名为"+tbName+"的所有数据花费时间为"+(queryEnd-queryStart)/1000+"秒");
+        return data;
+    }
 
     public Integer mergeData1(String dbName ,String tbName,String masterDataSource, List<Map<String,Object>> list,int groupSize,
                               Connection masterConn,Connection slaverConn
@@ -116,6 +191,22 @@ public class TbService {
        int count = salverDbUtil.getCount(sql,new Object[][]{});
 
       //  int count = 24116;
+
+        //查询被导入数据库的表结构
+        List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName,salverDbUtil);
+        //该主库是否存在此表
+        count = checkTable(tbName,masterDbUtil,null);
+        // 查询所有数据
+        Map<String, Object> param = new HashMap<>();
+
+
+        if (0 == count) {//若不存在则主数据源创建新表
+            // tableStructure = selectTableStructureByDbAndTb(dbName, tbName,masterConn);
+            getCreateTableSql(tbName, tb, param);
+            int i =createNewTable(param,masterDbUtil);
+
+        }
+
         int thrednum =  count%groupSize==0? count/groupSize: count/groupSize+1;//线程数
         int start =0;
         int end =0;
@@ -124,47 +215,25 @@ public class TbService {
         List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
         ExecutorService service = Executors.newFixedThreadPool(thrednum);
         BlockingQueue<Future<List<Map<String, Object>>>> queue = new LinkedBlockingQueue<Future<List<Map<String, Object>>>>();
-
+        final CountDownLatch  endLock = new CountDownLatch(thrednum); //结束门
         for (int i = 0; i < thrednum; i++) {
-            Future<List<Map<String, Object>>> future = service.submit(read2List(i, groupSize, salverDbUtil,dbName,tbName));
+            Future<List<Map<String, Object>>> future = service.submit(read2List(i, groupSize, salverDbUtil,dbName,tbName,masterDbUtil,endLock));
             queue.add(future);
         }
         int queueSize = queue.size();
-        for (int i = 0; i < queueSize; i++) {
+        endLock.await();
+       /* for (int i = 0; i < queueSize; i++) {
             List<Map<String, Object>> list1= queue.take().get();
             data.addAll(list1);
+        }*/
+        for (Future<List<Map<String, Object>>> future : queue) {
+            List<Map<String, Object>>  list1 = future.get();
+            data.addAll(list1);
         }
+         //主线程阻塞，直到所有线程执行完成
+//        for(Future<Integer> future : queue)  insertCount +=future.get();
+//        exec.shutdown(); //关闭线程池
         service.shutdown();
-
-
-
-/*        final BlockingQueue<Future<Integer>> queue = new LinkedBlockingQueue<>();
-        final CountDownLatch  endLock = new CountDownLatch(threads); //结束门
-        List<Future<Integer>> results = new ArrayList<Future<Integer>>();
-        final ExecutorService exec = Executors.newFixedThreadPool(threads);
-        for ( int i=0; i<threads ;i++ ) {
-            Future<Integer> future= //(Future<Integer>) threadPoolUtils
-                    exec.submit(new Callable<Integer>(){
-                        @Override
-                        public Integer call() {
-                            try {
-
-                                return selectAllByDbAndTbWithPage(dbName, tbName, salverDbUtil,i).size();
-                                //masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
-                            }catch(Exception e) {
-                               // logger.error("数据同步 exception!",e);
-                                return 0;
-                            }finally {
-                                endLock.countDown(); //线程执行完毕，结束门计数器减1
-                            }
-
-                        }
-                    });
-            queue.add(future);
-        }
-        endLock.await(); //主线程阻塞，直到所有线程执行完成
-        for(Future<Integer> future : queue)  insertCount +=future.get();
-        exec.shutdown(); //关闭线程池*/
 
        // List<Map<String, Object>> data1 = selectAllByDbAndTb(dbName, tbName, salverDbUtil);
         long queryEnd =System.currentTimeMillis();
@@ -203,7 +272,6 @@ public class TbService {
 
 
         if (0 == count) {//若不存在则主数据源创建新表
-           // tableStructure = selectTableStructureByDbAndTb(dbName, tbName,masterConn);
             getCreateTableSql(tbName, tb, param);
             int i =createNewTable(param,masterDbUtil);
 
@@ -215,7 +283,9 @@ public class TbService {
 
         long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
-        List<Map<String, Object>> data = selectAllByDbAndTb(dbName, tbName,salverDbUtil,null,null);
+        List<Map<String, Object>> data = getDataByMulitThreads( dbName , tbName, masterDataSource,   groupSize,
+         masterConn, slaverConn);
+                //selectAllByDbAndTb(dbName, tbName,salverDbUtil,null,null);
         if (data.size()==0) return 0;
         if (data.size()<groupSize) threads =1; //如果同步的数据太少 小于切割的数据条数 则只用一个线程
         Map<String,Object> m =(Map<String,Object>)data.get(0);
@@ -248,7 +318,8 @@ public class TbService {
                     public Integer call() {
                         try {
 
-                            return masterDbUtil. insert(tbName,dat,tb,isUseBatch);
+                            return 0;
+                                    //masterDbUtil. insert(tbName,dat,tb,isUseBatch);
                                     //masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
                         }catch(Exception e) {
                             logger.error("数据同步 exception!",e);
@@ -423,13 +494,16 @@ public class TbService {
      * @return
      */
     private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,  DbUtil dbUtil,Integer startIndex,Integer maxIndex) {
-        String sql =" select * from "+tbName+" where 1=1 ";
-        if (null !=startIndex){
-            sql+=" and rownum >"+startIndex;
-        }
-        if (null !=maxIndex){
-            sql+=" and rownum <"+maxIndex;
-        }
+        String sql = " select * from "+tbName;
+         if (null !=startIndex && null !=maxIndex)   {
+             sql =" SELECT * FROM  ( SELECT A.*, ROWNUM RN  FROM (SELECT * FROM "+tbName+") A  " +
+                     "WHERE ROWNUM <= " + maxIndex+
+                     ")  \n" +
+                     "WHERE RN > "+startIndex;
+         }
+
+
+        System.out.println(sql);
         return dbUtil.excuteQuery(sql,new Object[][]{});
     }
 

@@ -91,6 +91,7 @@ public class DbUtil {
             while (rs.next()) {
                 Map<String, Object> map = new LinkedHashMap<String, Object>();
                 for (int i = 1; i <= columnCount; i++) {
+                    if ("RN".equals(rsmd.getColumnLabel(i))) continue;
                     map.put(rsmd.getColumnLabel(i), rs.getObject(i));
                 }
                 list.add(map);//每一个map代表一条记录，把所有记录存在list中
@@ -279,6 +280,9 @@ public class DbUtil {
         Map<String,Object> m= newData.get(0);
         sql.append("insert into "+tbName+" (");
         for (Map.Entry<String, Object> mm:  m.entrySet()) {
+            if ("RN".equals(mm.getKey())){
+                continue;
+            }
             sql .append(mm.getKey()+",") ;
         }
         sql.deleteCharAt(sql.length()-1);
@@ -302,6 +306,14 @@ public class DbUtil {
         String dataType = null;
         java.sql.Date dateValue =null;
         boolean flag ;
+        Map<String, String> structureMap =new LinkedHashMap<>();
+        for (Map<String, Object> structure:tbstruct) {
+            cloumnName =structure.get("COLUMN_NAME")+"";
+            dataType =structure.get("DATA_TYPE")+"";
+            structureMap.put(cloumnName,dataType);
+        }
+
+
         for (int i = 0; i <dat.size() ; i++) {
             ma = (Map<String,Object>)dat.get(i);
             int j=0;
@@ -310,7 +322,20 @@ public class DbUtil {
 
                 if ("null".equals(value.trim())) value =null;
                 flag =false;
-                for (Map<String, Object> structure:tbstruct) {
+                dataType = structureMap.get(k);
+                if ( ("DATE".equals(dataType)  && value !=null )){
+                    value =   value.substring(0,value.indexOf("."));
+                    dateValue = DateUtil.strToDate(value);
+                    flag =true;
+                    //break;
+                }
+                if ( ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
+                    value =getValueByType(ma,k,dataType);
+                    //break;
+                }
+
+
+/*                for (Map<String, Object> structure:tbstruct) {
                    cloumnName =structure.get("COLUMN_NAME")+"";
                    dataType =structure.get("DATA_TYPE")+"";
                     if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
@@ -324,7 +349,7 @@ public class DbUtil {
                         break;
                     }
 
-                }
+                }*/
 
                 if (flag)pst.setObject(j+1,dateValue);
                 else pst.setObject(j+1,value);

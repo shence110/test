@@ -112,15 +112,15 @@ public class UserController  {
         try{
             masterConn = DataSourceHelper.GetConnection(masterDataSource);
             slaverConn = DataSourceHelper.GetConnection(dbName);
-          Long start =   System.currentTimeMillis();
+            Long start =   System.currentTimeMillis();
             groupSiz= Integer.valueOf(   groupSize  );
             list = getParamList(tbCollection, "tbs");
             for (Map<String, Object> map : list) {
                 tbName = map.get("TABLE_NAME") + "";
                 Map<String, String> resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
-               // resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
-                 resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+               resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+               //  resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
 
                 result.add(resultMap);
             }
