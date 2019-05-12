@@ -442,9 +442,10 @@ public class TbService {
         }*/
         if (null == list){//判断该表是否存在eaf_Id
           int i =  checkTable(  tbName, salverDbUtil,"EAF_ID");
+            list =new ArrayList<>();
+            Map<String,Object> map =new HashMap<>();
           if (i==1) {
-              list =new ArrayList<>();
-              Map<String,Object> map =new HashMap<>();
+
               List<String> columns = new ArrayList<>();
               columns.add("EAF_ID");
               map.put("COLUMN_NAME",columns);

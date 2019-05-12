@@ -99,14 +99,15 @@ public class TbController  {
     @RequestMapping("/mergeData")
     @ResponseBody
     public String mergeData(String dbName, String tbCollection) throws Exception {
-        Connection masterConn = null ;
-        Connection slaverConn = null;
-
+        Connection masterConn = null ;//主库连接
+        Connection slaverConn = null;//从库连接
         int groupSiz = 0; //每张表数据插入多次 一次插入的数据条数
         List<Map<String, Object>> list = null;
         List<Map<String, String>> result = new ArrayList<>();
         Map<String,Object> resu =new HashMap<>();
         String tbName = null;
+
+        Map<String, String> resultMap = null;
         try{
             masterConn = DataSourceHelper.GetConnection(masterDataSource);
             slaverConn = DataSourceHelper.GetConnection(dbName);
@@ -115,9 +116,9 @@ public class TbController  {
             list = getParamList(tbCollection, "tbs");
             for (Map<String, Object> map : list) {
                 tbName = map.get("TABLE_NAME") + "";
-                Map<String, String> resultMap = new HashMap();
+                resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
-               resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+                resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
                //  resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
 
                 result.add(resultMap);

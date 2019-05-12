@@ -484,13 +484,18 @@ public class DbUtil {
      * @throws Exception
      */
     public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws Exception {
+        int len =0;
+        try{
         String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
 
         int[] result = null;//批量插入返回的数组
       //  String columnName = null;//列名
         PreparedStatement pst = null;
         boolean isNeedDel = true;
-        if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
+
+        if (uniqueList.size() ==0 && (!tbName.startsWith("EAF_")&&!tbName.startsWith("BIM_"))) return 0;
+        if (uniqueList.size() ==0 && (tbName.startsWith("EAF_")||tbName.startsWith("BIM_"))) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
+
         List<String> columnNames ;
         if (uniqueList.size() == 1) {
             boolean flag =null != ((uniqueList.get(0).get("IS_NEED_DEL")) );
@@ -538,7 +543,13 @@ public class DbUtil {
             result = pst.executeBatch();
         }
         conn.commit();
-        return result.length;
+            len =  result.length;
+        }catch (Exception e){
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }finally {
+            return len;
+        }
     }
 
 }
