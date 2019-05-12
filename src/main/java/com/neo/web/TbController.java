@@ -53,8 +53,6 @@ public class TbController  {
 
     @RequestMapping("/")
     public String index() {
-   //return "queryAllTable";
-//return  "admin-help";
        return "user_list";
     }
 
