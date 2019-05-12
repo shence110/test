@@ -31,7 +31,7 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/")
-public class UserController  {
+public class TbController  {
 
 
     @Autowired
@@ -47,7 +47,7 @@ public class UserController  {
     public String groupSize;
 
 
-    private Logger logger = Logger.getLogger(UserController.class);
+    private Logger logger = Logger.getLogger(TbController.class);
 
 
 
