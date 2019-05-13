@@ -98,6 +98,7 @@ public class TableService {
         int count = getCount(dbName,tbName);//获得从库的数据条数
         int thrednum = getThreads(count) ;//线程数量
         int nums = getGroupSize(count);
+        int insertCount =0;
         //查询被导入数据库的表结构
         List<Map<String, Object>> tb = selectTableStructureByDbAndTb(dbName, tbName,salverDbUtil);
         //该主库是否存在此表
@@ -113,13 +114,14 @@ public class TableService {
         for (int i = 0; i <thrednum ; i++) {
             int startIndex = i * nums;
             int maxIndex = startIndex + nums;
-            Future<Integer> future = service.submit(new SyncTask(i, nums,dbName,tbName,endLock,startIndex,maxIndex));
-
+            Future<Integer> future = service.submit(new SyncTask(i, nums,masterDataSource,dbName,tbName,endLock,startIndex,maxIndex));
+            queue.add(future);
         }
+        endLock.await(); //主线程阻塞，直到所有线程执行完成
+        for(Future<Integer> future : queue)  insertCount +=future.get();
+        service.shutdown(); //关闭线程池
 
-
-
-       return 0;
+       return insertCount;
     }
 
 

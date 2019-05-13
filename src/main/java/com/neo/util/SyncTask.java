@@ -21,8 +21,7 @@ public class SyncTask implements Callable<Integer>{
      */
     private Logger logger = Logger.getLogger(SyncTask.class);
 
-    @Value("${spring.master.datasource}")
-    public String masterDataSource;
+
 
     int i; //线程序号
     int nums ;//一次同步数据量
@@ -32,10 +31,12 @@ public class SyncTask implements Callable<Integer>{
     CountDownLatch endLock;
     int startIndex;
     int maxIndex;
+    String masterDataSource;
 
-    public SyncTask(int i, int nums, String dbName, String tbName, CountDownLatch endLock, int startIndex, int maxIndex){
+    public SyncTask(int i, int nums,String masterDataSource, String dbName, String tbName, CountDownLatch endLock, int startIndex, int maxIndex){
         this.i =i;
         this.nums=nums;
+        this.masterDataSource=masterDataSource;
         this.dbName=dbName;
         this.tbName =tbName;
         this.endLock =endLock;
@@ -58,8 +59,12 @@ public class SyncTask implements Callable<Integer>{
                     "WHERE RN > "+startIndex;
 
         logger.info("当前线程 : "+Thread.currentThread().getName() +sql );
-        List<Map<String,Object>> list = salver.excuteQuery(sql,new Object[][]{});
-        salver.excuteQuery(sql,new Object[][]{});
-        return null;
+        Map<String,Object> result = salver.excuteQueryWithMuliResult(sql,new Object[][]{});
+        JDBCUtil master =new JDBCUtil(masterDataSource);
+
+        int len =  master.batchInsert(tbName,result);
+        endLock.countDown();//计时器减1
+        return  len ;
+
     }
 }
