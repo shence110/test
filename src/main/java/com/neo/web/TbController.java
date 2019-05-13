@@ -6,21 +6,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.neo.service.TbService;
 import com.neo.util.DataSourceHelper;
-import com.neo.util.JDBCUtil;
-import com.neo.util.SpringContextUtil;
 import com.neo.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -114,7 +107,9 @@ public class TbController  {
             Long start =   System.currentTimeMillis();
             groupSiz= Integer.valueOf(   groupSize  );
             list = getParamList(tbCollection, "tbs");
+            int k=0;
             for (Map<String, Object> map : list) {
+
                 tbName = map.get("TABLE_NAME") + "";
                 resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
@@ -144,6 +139,8 @@ public class TbController  {
 
 
     }
+
+ 
 
     /**
      * 解析json

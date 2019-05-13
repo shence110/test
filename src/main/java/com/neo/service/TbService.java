@@ -494,7 +494,7 @@ public class TbService {
      * @param paramsMap
      * @return
      */
-    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,  DbUtil dbUtil,Integer startIndex,Integer maxIndex) {
+    private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,  DbUtil dbUtil,Integer startIndex,Integer maxIndex) throws SQLException {
         String sql = " select * from "+tbName;
          if (null !=startIndex && null !=maxIndex)   {
              sql =" SELECT * FROM  ( SELECT A.*, ROWNUM RN  FROM (SELECT * FROM "+tbName+") A  " +
@@ -514,7 +514,7 @@ public class TbService {
      * @param tbName
      * @return
      */
-    private List<Map<String,Object>> selectTableStructureByDbAndTb(String dbName, String tbName, DbUtil dbUtil) {
+    private List<Map<String,Object>> selectTableStructureByDbAndTb(String dbName, String tbName, DbUtil dbUtil) throws SQLException {
         String sql ="select t.COLUMN_NAME,  t.DATA_TYPE, t.DATA_LENGTH,\n" +
                 "        t.DATA_PRECISION, t.NULLABLE, t.COLUMN_ID, c.COMMENTS,\n" +
                 "                (\n" +

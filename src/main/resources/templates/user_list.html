@@ -21,7 +21,11 @@ textField:'text',onChange:uie_dgd_search" id="db">
 
 <table id="dataTable"  style="width:98%;height:98%">
 </table>
-<div id="weektb">
+<div id="weektb"/>
+
+<div id="w" class="easyui-window" title="Modal Window" data-options="modal:true,closed:true,iconCls:'icon-save'" style="width:500px;height:200px;padding:10px;">
+    The window content.
+</div>
 
 </body>
 <script>
@@ -54,6 +58,8 @@ textField:'text',onChange:uie_dgd_search" id="db">
                 disLoad();
                 if(data.err){
                     alert(data.content) ;
+                    // $('#w').html(content);
+                    // $('#w').show();
                     return;
                 }
                 var list = data.list;
@@ -62,6 +68,8 @@ textField:'text',onChange:uie_dgd_search" id="db">
                 for(var i=0;i<list.length;i++){
                     html +='序号'+i+'： '+list[i].TABLE_NAME+'成功同步'+list[i].INSERT_COUNT+'条数据   ';
                 }
+                // $('#w').html(html);
+                // $('#w').show();
                 alert(html);
 
             },
