@@ -53,16 +53,41 @@ public class SyncTask implements Callable<Integer>{
     @Override
     public Integer call() throws Exception {
         JDBCUtil salver  = new JDBCUtil(dbName);
-        String   sql =" SELECT * FROM  ( SELECT A.*, ROWNUM RN  FROM (SELECT * FROM "+tbName+") A  " +
+        String sql = "select A.COLUMN_NAME,A.DATA_TYPE  from user_tab_columns A\n" +
+                "where TABLE_NAME='"+tbName.toUpperCase()+"'";
+        List<Map<String,Object>> list = salver.excuteQuery(sql,new Object[][]{});
+        sql =" select ";
+        String dataType;
+        String column;
+        int size = list.size();
+        int k=0;
+
+        for (Map<String,Object> column2Type:  list ) {
+            k++;
+            dataType = column2Type.get("DATA_TYPE")+"";
+            column = column2Type.get("COLUMN_NAME")+"";
+            if ("DATE".equals(dataType)){
+                column= " to_char("+column+",'yyyy-mm-dd hh24:mi:ss') "+column;
+            }
+            else if ("CLOB".equals(dataType) || "BLOB".equals(dataType) || "LONG RAW".equals(dataType)){
+                column= " to_char("+column+") "+column;
+            }
+            sql+= column;
+            if (k!=size) sql+=",";
+        }
+        sql += " from "+tbName;
+
+        String   querySql =" SELECT * FROM  ( SELECT A.*, ROWNUM RN  FROM (SELECT * FROM ("+sql+")t ) A  " +
                     "WHERE ROWNUM <= " + maxIndex+
                     ")  \n" +
                     "WHERE RN > "+startIndex;
 
-        logger.info("当前线程 : "+Thread.currentThread().getName() +sql );
-        Map<String,Object> result = salver.excuteQueryWithMuliResult(sql,new Object[][]{});
-        JDBCUtil master =new JDBCUtil(masterDataSource);
+        logger.info("当前线程 : "+Thread.currentThread().getName() +querySql );
+        Map<String,Object> result = salver.excuteQueryWithMuliResult(querySql,new Object[][]{});
+       JDBCUtil master =new JDBCUtil(masterDataSource);
 
-        int len =  master.batchInsert(tbName,result);
+     int len = 0;
+        master.batchInsert(tbName,result);
         endLock.countDown();//计时器减1
         return  len ;
 

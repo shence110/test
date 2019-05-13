@@ -290,9 +290,8 @@ public class JDBCUtil {
                 k++;
                 Map<String, Object> map = new HashMap<String, Object>();
                 for (int i = 1; i <= columnCount; i++) {
-
-                    if (k==1){
-                       clumn2Type.put(rsmd.getColumnLabel(i),rsmd.getColumnTypeName(i));
+                    if (k==1 && !"RN".equals(rsmd.getColumnLabel(i))){
+                        clumn2Type.put(rsmd.getColumnLabel(i),rsmd.getColumnTypeName(i));
                     }
                     if ("RN".equals(rsmd.getColumnLabel(i))) continue;
                     map.put(rsmd.getColumnLabel(i), rs.getObject(i));
