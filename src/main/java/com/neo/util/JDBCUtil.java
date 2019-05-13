@@ -98,13 +98,14 @@ public class JDBCUtil {
      * @param params 参数数组，若没有参数则为null
      * @return 受影响的行数
      */
-    public int executeUpdate(String sql, Object[] params,boolean isCloseConn) {
+    public int executeUpdate(String sql, Object[] params)  {
         // 受影响的行数
         int affectedLine = 0;
 
         try {
             // 获得连接
             conn = this.getConnection();
+            conn.setAutoCommit(false);
             // 调用SQL
             pst = conn.prepareStatement(sql);
 
@@ -119,16 +120,19 @@ public class JDBCUtil {
                                           语句；或者是无返回内容的 SQL 语句，比如 DDL 语句。    */
             // 执行
             affectedLine = pst.executeUpdate();
+            conn.commit();
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            System.out.println(sql);
+            try {
+                conn.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+            logger.error(e.getMessage());
+            logger.info(sql);
         } finally {
             // 释放资源
-            if (isCloseConn){
                 closeAll();
-            }
-
         }
         return affectedLine;
     }
@@ -333,6 +337,28 @@ public class JDBCUtil {
                logger.error(e.getMessage());
             }
         }
+    }
+
+    public int getCount(String sql, Object[] params) {
+
+        // 执行SQL获得结果集
+        ResultSet rs = executeQueryRS(sql, params);
+
+        int rowCount = 0;
+        try {
+            if(rs.next())
+            {
+                rowCount=rs.getInt(1);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }
+        finally{
+          closeAll();
+        }
+
+        return rowCount;
     }
 }
 

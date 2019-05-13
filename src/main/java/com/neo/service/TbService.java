@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 import com.neo.util.CollectionUtil;
+import com.neo.util.DataSourceHelper;
 import com.neo.util.DbUtil;
 import org.apache.log4j.Logger;
 import org.codehaus.groovy.tools.StringHelper;
@@ -137,7 +138,8 @@ public class TbService {
                 //判断该表是否使用批处理
                // boolean isUseBatch = checTableIsUseBatch(tbName);
                // masterDbUtil. insert(tbName,list,tb,isUseBatch);
-                return list;}
+                return list;
+                }
                 catch (Exception e){
                     e.printStackTrace();
                     return new ArrayList<>();
@@ -155,6 +157,8 @@ public class TbService {
     List<Map<String, Object>> getDataByMulitThreads(String dbName ,String tbName,String masterDataSource ,int groupSize,
                           Connection masterConn,Connection slaverConn) throws SQLException, InterruptedException, ExecutionException {
         String  sql =" select count(1) from "+tbName ;
+        if ( null == slaverConn || slaverConn.isClosed()) slaverConn = DataSourceHelper.GetConnection(dbName);
+        if ( null == masterConn||  masterConn.isClosed()) masterConn = DataSourceHelper.GetConnection(masterDataSource);
         DbUtil salverDbUtil =new DbUtil(slaverConn);
         DbUtil masterDbUtil =new DbUtil(masterConn);
         int count = salverDbUtil.getCount(sql,new Object[][]{});
@@ -168,6 +172,8 @@ public class TbService {
         groupSize = getGroupSize(count);
         final CountDownLatch  endLock = new CountDownLatch(thrednum); //结束门
         for (int i = 0; i < thrednum; i++) {
+            if (slaverConn ==null || slaverConn.isClosed())slaverConn = DataSourceHelper.GetConnection(dbName);
+            salverDbUtil = new DbUtil(slaverConn);
             Future<List<Map<String, Object>>> future = service.submit(read2List(i, groupSize, salverDbUtil,dbName,tbName,masterDbUtil,endLock));
             queue.add(future);
         }
@@ -283,9 +289,9 @@ public class TbService {
 
         long queryStart =System.currentTimeMillis();
         //查询某个库下的某个表的所有数据
-        List<Map<String, Object>> data = getDataByMulitThreads( dbName , tbName, masterDataSource,   groupSize,
-         masterConn, slaverConn);
-                //selectAllByDbAndTb(dbName, tbName,salverDbUtil,null,null);
+        List<Map<String, Object>> data =
+                //getDataByMulitThreads( dbName , tbName, masterDataSource,   groupSize, masterConn, slaverConn);
+                selectAllByDbAndTb(dbName, tbName,salverDbUtil,null,null);
         if (data.size()==0) return 0;
         if (data.size()<groupSize) threads =1; //如果同步的数据太少 小于切割的数据条数 则只用一个线程
         Map<String,Object> m =(Map<String,Object>)data.get(0);
@@ -318,8 +324,7 @@ public class TbService {
                     public Integer call() {
                         try {
 
-                            return 0;
-                                    //masterDbUtil. insert(tbName,dat,tb,isUseBatch);
+                            return  masterDbUtil. insert(tbName,dat,tb,isUseBatch);
                                     //masterDbUtil. batchInsertJsonArry(tbName,dat,tb);
                         }catch(Exception e) {
                             logger.error("数据同步 exception!",e);
@@ -495,6 +500,7 @@ public class TbService {
      * @return
      */
     private List<Map<String,Object>> selectAllByDbAndTb(String dbName, String tbName,  DbUtil dbUtil,Integer startIndex,Integer maxIndex) throws SQLException {
+
         String sql = " select * from "+tbName;
          if (null !=startIndex && null !=maxIndex)   {
              sql =" SELECT * FROM  ( SELECT A.*, ROWNUM RN  FROM (SELECT * FROM "+tbName+") A  " +

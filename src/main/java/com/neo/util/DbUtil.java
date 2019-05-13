@@ -109,8 +109,9 @@ public class DbUtil {
             logger.error(e.getMessage());
             logger.error(sql);
         } finally {
-            pst.close();
-            rs.close();
+            if (null!= rs) rs.close();
+            if (null!= pst) pst.close();
+            if (null!= conn) conn.close();
         }
 
         return list;
@@ -178,24 +179,46 @@ public class DbUtil {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             System.out.println(sql);
-        }/* finally {
-            // 释放资源
-            if (isCloseConn){
+        } finally {
                 closeAll();
-            }
-
-        }*/
+        }
         return affectedLine;
     }
+
+    /**
+     *  关闭数据连接
+     *  /
+     */
+    private void closeAll(){
+
+        try {
+            if(rst !=null)rst.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        try {
+            if(pst !=null)pst.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        try {
+            if(conn !=null)conn.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+    }
+
 
     public int insert(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct,boolean isUseBatch) throws Exception {
         int len =0;
         try{
             if (isUseBatch){
                 len =  batchInsertJsonArry(tbName,newData,tbstruct);
-            }
+            }else len =  odinaryInsert(tbName,newData,tbstruct);
         }catch (Exception e){
-            len =  odinaryInsert(tbName,newData,tbstruct);
+           if(isUseBatch) len =  odinaryInsert(tbName,newData,tbstruct);
         }
        return len ;
 
@@ -264,13 +287,7 @@ public class DbUtil {
             logger.error(sql.toString(),e);
             e.printStackTrace();
         }finally {
-            try {
-                pst.close();
-                rst.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
+            closeAll();
         }
         return 0;
 
@@ -296,8 +313,7 @@ public class DbUtil {
            logger.error(sql.toString(),e);
            e.printStackTrace();
         }finally {
-            pst.close();
-            rst.close();
+            closeAll();
         }
         return 0;
 

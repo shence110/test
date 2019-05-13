@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.neo.service.TableService;
 import com.neo.service.TbService;
 import com.neo.util.DataSourceHelper;
 import com.neo.util.StringUtils;
@@ -29,6 +30,9 @@ public class TbController  {
 
     @Autowired
     TbService tbService;
+
+    @Autowired
+    TableService tableService;
 
     @Value("${spring.master.datasource}")
     public String masterDataSource;
@@ -113,7 +117,7 @@ public class TbController  {
                 tbName = map.get("TABLE_NAME") + "";
                 resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
-                resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+                resultMap.put("INSERT_COUNT", tableService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
                //  resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
 
                 result.add(resultMap);
@@ -140,7 +144,7 @@ public class TbController  {
 
     }
 
- 
+
 
     /**
      * 解析json
