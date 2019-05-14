@@ -4,23 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.neo.service.TableService;
 import com.neo.service.TbService;
 import com.neo.util.DataSourceHelper;
-import com.neo.util.JDBCUtil;
-import com.neo.util.SpringContextUtil;
 import com.neo.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -31,11 +25,14 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/")
-public class UserController  {
+public class TbController  {
 
 
     @Autowired
     TbService tbService;
+
+    @Autowired
+    TableService tableService;
 
     @Value("${spring.master.datasource}")
     public String masterDataSource;
@@ -47,14 +44,12 @@ public class UserController  {
     public String groupSize;
 
 
-    private Logger logger = Logger.getLogger(UserController.class);
+    private Logger logger = Logger.getLogger(TbController.class);
 
 
 
     @RequestMapping("/")
     public String index() {
-   //return "queryAllTable";
-//return  "admin-help";
        return "user_list";
     }
 
@@ -101,26 +96,29 @@ public class UserController  {
     @RequestMapping("/mergeData")
     @ResponseBody
     public String mergeData(String dbName, String tbCollection) throws Exception {
-        Connection masterConn = null ;
-        Connection slaverConn = null;
-
+        Connection masterConn = null ;//主库连接
+        Connection slaverConn = null;//从库连接
         int groupSiz = 0; //每张表数据插入多次 一次插入的数据条数
         List<Map<String, Object>> list = null;
         List<Map<String, String>> result = new ArrayList<>();
         Map<String,Object> resu =new HashMap<>();
         String tbName = null;
+
+        Map<String, String> resultMap = null;
         try{
             masterConn = DataSourceHelper.GetConnection(masterDataSource);
             slaverConn = DataSourceHelper.GetConnection(dbName);
-          Long start =   System.currentTimeMillis();
+            Long start =   System.currentTimeMillis();
             groupSiz= Integer.valueOf(   groupSize  );
             list = getParamList(tbCollection, "tbs");
+            int k=0;
             for (Map<String, Object> map : list) {
+
                 tbName = map.get("TABLE_NAME") + "";
-                Map<String, String> resultMap = new HashMap();
+                resultMap = new HashMap();
                 resultMap.put("TABLE_NAME", tbName);
-               // resultMap.put("INSERT_COUNT", tbService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
-                 resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+                resultMap.put("INSERT_COUNT", tableService.mergeData(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
+               //  resultMap.put("INSERT_COUNT", tbService.mergeData1(dbName, tbName, masterDataSource, list, Integer.valueOf(groupSiz),masterConn,slaverConn)+"");
 
                 result.add(resultMap);
             }
@@ -145,6 +143,8 @@ public class UserController  {
 
 
     }
+
+
 
     /**
      * 解析json

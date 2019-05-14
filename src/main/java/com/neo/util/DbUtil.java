@@ -56,16 +56,25 @@ public class DbUtil {
         ResultSet rs = executeQueryRS(sql, params);
 
         int rowCount = 0;
-        if(rs.next())
-        {
-            rowCount=rs.getInt(1);
+        try {
+            if(rs.next())
+            {
+                rowCount=rs.getInt(1);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }
+        finally{
+            pst.close();
+            rs.close();
         }
 
         return rowCount;
     }
 
 
-    public List<Map<String, Object>> excuteQuery(String sql, Object[] params) {
+    public List<Map<String, Object>> excuteQuery(String sql, Object[] params) throws SQLException {
         // 执行SQL获得结果集
         ResultSet rs = executeQueryRS(sql, params);
 
@@ -91,6 +100,7 @@ public class DbUtil {
             while (rs.next()) {
                 Map<String, Object> map = new LinkedHashMap<String, Object>();
                 for (int i = 1; i <= columnCount; i++) {
+                    if ("RN".equals(rsmd.getColumnLabel(i))) continue;
                     map.put(rsmd.getColumnLabel(i), rs.getObject(i));
                 }
                 list.add(map);//每一个map代表一条记录，把所有记录存在list中
@@ -98,10 +108,11 @@ public class DbUtil {
         } catch (SQLException e) {
             logger.error(e.getMessage());
             logger.error(sql);
-        }/* finally {
-            // 关闭所有资源
-            closeAll();
-        }*/
+        } finally {
+            if (null!= rs) rs.close();
+            if (null!= pst) pst.close();
+            if (null!= conn) conn.close();
+        }
 
         return list;
     }
@@ -112,7 +123,7 @@ public class DbUtil {
      * @param params 参数数组，若没有参数则为null
      * @return 结果集
      */
-    private ResultSet executeQueryRS(String sql, Object[] params) {
+    private ResultSet executeQueryRS(String sql, Object[] params) throws SQLException {
         try {
             // 获得连接
 
@@ -130,10 +141,9 @@ public class DbUtil {
             rst = pst.executeQuery();
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
 
         }
-
         return rst;
     }
 
@@ -169,26 +179,57 @@ public class DbUtil {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             System.out.println(sql);
-        }/* finally {
-            // 释放资源
-            if (isCloseConn){
+        } finally {
                 closeAll();
-            }
-
-        }*/
+        }
         return affectedLine;
     }
 
-    public int insert(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct,boolean isUseBatch){
-        if (isUseBatch) return batchInsertJsonArry(tbName,newData,tbstruct);
-        return odinaryInsert(tbName,newData,tbstruct);
+    /**
+     *  关闭数据连接
+     *  /
+     */
+    private void closeAll(){
+
+        try {
+            if(rst !=null)rst.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        try {
+            if(pst !=null)pst.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+        try {
+            if(conn !=null)conn.close();
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+
+    public int insert(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct,boolean isUseBatch) throws Exception {
+        int len =0;
+        try{
+            if (isUseBatch){
+                len =  batchInsertJsonArry(tbName,newData,tbstruct);
+            }else len =  odinaryInsert(tbName,newData,tbstruct);
+        }catch (Exception e){
+           if(isUseBatch) len =  odinaryInsert(tbName,newData,tbstruct);
+        }
+       return len ;
+
+
     }
 
     private int odinaryInsert(String tbName, List<Map<String,Object>> dat, List<Map<String,Object>> tbstruct) {
         long start = System.currentTimeMillis();
         String  sql= sql =  getInsertSql( tbName,  dat);;
         int[] result= null;
-        PreparedStatement pst ;
+        PreparedStatement pst = null;
         Map<String,Object> ma;
         String value ;
         boolean flag;
@@ -245,16 +286,18 @@ public class DbUtil {
         } catch (Exception e) {
             logger.error(sql.toString(),e);
             e.printStackTrace();
+        }finally {
+            closeAll();
         }
         return 0;
 
     }
 
-    public int batchInsertJsonArry(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct){
+    public int batchInsertJsonArry(String tbName, List<Map<String, Object>> newData,List<Map<String, Object>> tbstruct) throws Exception{
         long start = System.currentTimeMillis();
         String  sql= null;
         int[] result= null;
-        PreparedStatement pst ;
+        PreparedStatement pst = null;
         try {
             sql =  getInsertSql( tbName,  newData);
             conn.setAutoCommit(false);
@@ -269,6 +312,8 @@ public class DbUtil {
         } catch (Exception e) {
            logger.error(sql.toString(),e);
            e.printStackTrace();
+        }finally {
+            closeAll();
         }
         return 0;
 
@@ -279,6 +324,9 @@ public class DbUtil {
         Map<String,Object> m= newData.get(0);
         sql.append("insert into "+tbName+" (");
         for (Map.Entry<String, Object> mm:  m.entrySet()) {
+            if ("RN".equals(mm.getKey())){
+                continue;
+            }
             sql .append(mm.getKey()+",") ;
         }
         sql.deleteCharAt(sql.length()-1);
@@ -302,6 +350,14 @@ public class DbUtil {
         String dataType = null;
         java.sql.Date dateValue =null;
         boolean flag ;
+        Map<String, String> structureMap =new LinkedHashMap<>();
+        for (Map<String, Object> structure:tbstruct) {
+            cloumnName =structure.get("COLUMN_NAME")+"";
+            dataType =structure.get("DATA_TYPE")+"";
+            structureMap.put(cloumnName,dataType);
+        }
+
+
         for (int i = 0; i <dat.size() ; i++) {
             ma = (Map<String,Object>)dat.get(i);
             int j=0;
@@ -310,27 +366,19 @@ public class DbUtil {
 
                 if ("null".equals(value.trim())) value =null;
                 flag =false;
-                for (Map<String, Object> structure:tbstruct) {
-                   cloumnName =structure.get("COLUMN_NAME")+"";
-                   dataType =structure.get("DATA_TYPE")+"";
-                    if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
-                        value =   value.substring(0,value.indexOf("."));
-                        dateValue = DateUtil.strToDate(value);
-                        flag =true;
-                        break;
-                    }
-                    if ( k.equals(cloumnName) && ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
-                        value =getValueByType(ma,k,dataType);
-                        break;
-                    }
-
+                dataType = structureMap.get(k);
+                if ( ("DATE".equals(dataType)  && value !=null )){
+                    value =   value.substring(0,value.indexOf("."));
+                    dateValue = DateUtil.strToDate(value);
+                    flag =true;
                 }
-
+                if ( ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
+                    value =getValueByType(ma,k,dataType);
+                }
                 if (flag)pst.setObject(j+1,dateValue);
                 else pst.setObject(j+1,value);
                 j++;
             }
-
             pst.addBatch();
 
             if(i>0 && i%1000==0){
@@ -351,82 +399,6 @@ public class DbUtil {
         return  ik;
     }
 
-    private int[] insertBatch1(String tbName, List<Map<String, Object>> dat,PreparedStatement pst,List<Map<String, Object>> tbstruct) throws SQLException, IOException {
-        conn.setAutoCommit(false);
-        Map<String,Object> m =(Map<String,Object>)dat.get(0);
-        int[] ik =null;
-        String value = null;
-        Map<String,Object> ma = null;
-        String cloumnName = null;
-        String dataType = null;
-        java.sql.Date dateValue =null;
-        boolean flag ;
-        List<String> dataTypeList =new ArrayList<>();
-        //表结构字段顺序和数据列表字段顺序相同
-        tbstruct.forEach(e-> dataTypeList.add(e.get("DATA_TYPE")+""));
-
-       // String[] arr = new  String[tbstruct.size()];
-
-        for (int i = 0; i <dat.size() ; i++) {
-            ma = (Map<String,Object>)dat.get(i);
-            int j=0;
-            for (String k:ma.keySet()) {
-                value =ma.get(k)+"";
-
-                if ("null".equals(value.trim())) value =null;
-                flag =false;
-                dataType = dataTypeList.get(j);
-                if ( ("DATE".equals(dataType)  && value !=null )){
-                    value =   value.substring(0,value.indexOf("."));
-                    dateValue = DateUtil.strToDate(value);
-                    flag =true;
-                }
-                if (  ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
-                    value =getValueByType(ma,k,dataType);
-
-                }
-                /*
-                for (Map<String, Object> structure:tbstruct) {
-                    cloumnName =structure.get("COLUMN_NAME")+"";
-                    dataType =structure.get("DATA_TYPE")+"";
-                    if ( k.equals(cloumnName) && ("DATE".equals(dataType)  && value !=null )){
-                        value =   value.substring(0,value.indexOf("."));
-                        dateValue = DateUtil.strToDate(value);
-                        flag =true;
-                        break;
-                    }
-                    if ( k.equals(cloumnName) && ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
-                        value =getValueByType(ma,k,dataType);
-                        break;
-                    }
-
-                }
-                */
-
-                if (flag)pst.setObject(j+1,dateValue);
-                else pst.setObject(j+1,value);
-                j++;
-            }
-
-            pst.addBatch();
-
-            if(i>0 && i%1000==0){
-                ik = pst.executeBatch();
-                //清除批处理命令
-                pst.clearBatch();
-                //如果不想出错后，完全没保留数据，则可以每执行一次提交一次，但得保证数据不会重复
-
-                conn.commit();
-
-            }
-
-
-        }
-        ik = pst.executeBatch();
-        pst.clearBatch();
-        conn.commit();
-        return  ik;
-    }
 
 
     /**
@@ -459,13 +431,18 @@ public class DbUtil {
      * @throws Exception
      */
     public int batchDelete(List<Map<String, Object>> data, List<Map<String, Object>> uniqueList, String tbName) throws Exception {
+        int len =0;
+        try{
         String sql = " DELETE  FROM   " + tbName + " where 1=1 ";
 
         int[] result = null;//批量插入返回的数组
       //  String columnName = null;//列名
         PreparedStatement pst = null;
         boolean isNeedDel = true;
-        if (uniqueList.size() ==0) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
+
+        if (uniqueList.size() ==0 && (!tbName.startsWith("EAF_")&&!tbName.startsWith("BIM_"))) return 0;
+        if (uniqueList.size() ==0 && (tbName.startsWith("EAF_")||tbName.startsWith("BIM_"))) throw new Exception(tbName+"缺少唯一键,请在资源文件中配置");
+
         List<String> columnNames ;
         if (uniqueList.size() == 1) {
             boolean flag =null != ((uniqueList.get(0).get("IS_NEED_DEL")) );
@@ -513,7 +490,14 @@ public class DbUtil {
             result = pst.executeBatch();
         }
         conn.commit();
-        return result.length;
+            len =  result.length;
+        }catch (Exception e){
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }finally {
+            pst.close();
+            return len;
+        }
     }
 
 }
