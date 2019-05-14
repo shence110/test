@@ -84,9 +84,9 @@ public class SyncTask implements Callable<Integer>{
 
         logger.info("当前线程 : "+Thread.currentThread().getName() +querySql );
         Map<String,Object> result = salver.excuteQueryWithMuliResult(querySql,new Object[][]{});
-       JDBCUtil master =new JDBCUtil(masterDataSource);
+        JDBCUtil master =new JDBCUtil(masterDataSource);
 
-     int len = 0;
+        int len = 0;
         master.batchInsert(tbName,result);
         endLock.countDown();//计时器减1
         return  len ;

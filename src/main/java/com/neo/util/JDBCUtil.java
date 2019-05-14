@@ -478,26 +478,21 @@ public class JDBCUtil {
         String dataType = null;
         java.sql.Date dateValue =null;
         boolean flag ;
+        int j;
         for (int i = 0; i <dat.size() ; i++) {
             ma = (Map<String,Object>)dat.get(i);
-            int j=0;
+             j=0;
             for (String k:ma.keySet()) {
+                j++;
                 value =ma.get(k)+"";
-
                 if ("null".equals(value.trim())) value =null;
                 flag =false;
                 dataType = structureMap.get(k)+"";
                 if ( ("DATE".equals(dataType)  && value !=null )){
-                    value =   value.substring(0,value.indexOf("."));
-                    dateValue = DateUtil.strToDate(value);
-                    flag =true;
+                    if (flag)pst.setObject(j,"to_char("+value+",'yyyy-mm-dd hh24:mi:ss')");
                 }
-                if ( ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
-                    value =getValueByType(ma,k,dataType);
-                }
-                if (flag)pst.setObject(j+1,dateValue);
-                else pst.setObject(j+1,value);
-                j++;
+                else pst.setObject(j,value);
+
             }
             pst.addBatch();
 
@@ -542,13 +537,9 @@ public class JDBCUtil {
 
                         dataType =tbstruct.get(k)+"";
                         if (  ("DATE".equals(dataType)  && value !=null )){
-                            value =   value.substring(0,value.indexOf("."));
-                            dateValue = DateUtil.strToDate(value);
-                            pst.setObject(j,dateValue);
-
+                            pst.setObject(j,"to_char("+value+",'yyyy-mm-dd hh24:mi:ss')");
                         }
-                        if (  ("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
-                            value =getValueByType(ma,k,dataType);
+                        if (("CLOB".equals(dataType) ||"BLOB".equals(dataType)) && value !=null){
                             pst.setObject(j,value);
                         }else{
                             pst.setObject(j,value);
